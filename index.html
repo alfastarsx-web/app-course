@@ -369,6 +369,12 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
 .dars-q{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--line);font-weight:700}
 .dars-q:first-of-type{border-top:0}
 .dars-q span{color:var(--mut);font-weight:600;font-size:14px}
+.taklif-k{border:2px solid var(--teal);border-radius:20px;padding:16px;background:var(--teal-soft)}
+.taklif-k .kunlar-t{font-family:'Unbounded';font-size:18px;margin:6px 0 2px}
+.taklif-k .muddat{display:inline-flex;gap:6px;align-items:center;background:#fff;color:#0f766e;font-weight:800;font-size:13px;border-radius:999px;padding:6px 12px;margin-top:10px}
+.chek{display:block;border:2px dashed var(--line);border-radius:16px;padding:16px;text-align:center;font-weight:700;color:var(--mut);cursor:pointer;margin-top:12px}
+.chek.bor{border-style:solid;border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+.chek input{display:none}
 .b-xato:empty{display:none}
 .b-xato{color:var(--coral);text-align:center;font-weight:700;font-size:14px;min-height:1.2em;margin:8px 0 0}
 </style>
@@ -932,22 +938,19 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         <div class="b-kart">
           ${ustozKart(u)}
           <h3 style="margin-top:16px">${ustozIsm} bilan davom etish</h3>
-          <p class="b-izoh">Haftasiga necha marta o‘qishni tanlang. Oyiga 4 hafta hisobida.</p>
-          <div class="tariflar" id="tariflar">${tariflar(h).map(([n, narx]) => `
-            <button type="button" class="tarif${n === 3 ? ' top' : ''}" data-tarif="${n}" aria-pressed="false"><b>${n}×</b><small>haftada</small><strong>${narx.toLocaleString('ru-RU')}</strong><small>so‘m / oy · ${n * 4} dars</small></button>`).join('')}
-          </div>
-          <div id="tolovQism" hidden></div>
+          <div id="taklifQism">${taklifQism(h, ustozIsm)}</div>
         </div>
       </div>`;
       if (h.tolovRad) $('.b-ichi').insertAdjacentHTML('afterbegin', `<div class="banner qizil"><span class="e">⚠️</span><span>Oldingi to‘lov tasdiqlanmadi: ${esc(h.tolovRad)}. Qayta urinib ko‘ring yoki @MT_yordam_bot ga yozing.</span></div>`);
       if (!h.baho) bahoUlash();
-      tolovUlash(h);
+      taklifUlash(h);
     } else if (h.bosqich === 'tolov_tekshirilmoqda') {
       const t = h.tolov || {};
       el.innerHTML = bosh(h.ism, 'To‘lov', 'To‘lovingiz tekshirilmoqda ⏳', 'Pul tushgani tasdiqlanishi bilan bildirishnoma keladi va darslaringiz shu yerda chiqadi.') + `
       <div class="b-ichi">
         <div class="b-kart">
           <div class="summa"><span>${t.perWeek ? `Haftada ${t.perWeek} marta · ${t.perWeek * 4} dars` : 'Oylik to‘lov'}</span><b>${Number(t.summa || 0).toLocaleString('ru-RU')} so‘m</b></div>
+          ${h.taklif && h.taklif.slotsText ? `<p class="b-izoh" style="margin:6px 0 0">🗓️ ${esc(h.taklif.slotsText)} — soatlar sizga band</p>` : ''}
           ${h.karta ? kartaQuti(h.karta) + '<p class="b-izoh" style="margin:0">Hali o‘tkazmagan bo‘lsangiz — shu kartaga o‘tkazing.</p>' : ''}
           <p class="b-izoh" style="margin:12px 0 0">Odatda 1 soat ichida tekshiriladi (09:00–21:00). Savol bo‘lsa: <b>@MT_yordam_bot</b></p>
         </div>
@@ -983,9 +986,6 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     }
     pk();
   }
-  // Haftalik narxlar (oyiga) — mentor hamyoni HAFTALIK_NARXLAR bilan bir xil (server yubormasa zaxira)
-  const TARIFLAR = [[1, 350000], [2, 450000], [3, 550000], [4, 650000], [5, 750000], [6, 850000]];
-  const tariflar = (h) => (h && h.tariflar && h.tariflar.length ? h.tariflar.map((x) => [x.perWeek, x.narx]) : TARIFLAR);
   function kartaQuti(k){
     return `<div class="karta-quti"><small>Karta raqami</small>
       <div class="kq-raqam"><b>${esc(k.raqam)}</b><button type="button" data-nusxa="${esc(String(k.raqam).replace(/\s/g, ''))}">Nusxa</button></div>
@@ -999,38 +999,70 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       };
     });
   }
-  // Tarif tanlash -> karta raqami -> "To'ladim"
-  function tolovUlash(h){
-    const box = $('#tariflar'); if (!box) return;
-    box.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-tarif]'); if (!b) return;
-      box.querySelectorAll('[data-tarif]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      const n = Number(b.dataset.tarif);
-      const narx = (tariflar(h).find(([k]) => k === n) || [0, 0])[1];
-      const q = $('#tolovQism');
-      q.hidden = false;
-      q.innerHTML = `<div style="margin-top:16px">
-          <div class="summa"><span>Haftada ${n} marta · ${n * 4} dars</span><b>${narx.toLocaleString('ru-RU')} so‘m</b></div>
-          ${h.karta ? kartaQuti(h.karta) + `<ol class="qadamlar"><li>Shu kartaga <b>${narx.toLocaleString('ru-RU')} so‘m</b> o‘tkazing (Click, Payme yoki bank ilovasida)</li><li>“To‘ladim” tugmasini bosing — to‘lov tekshiriladi</li></ol>`
-                    : '<p class="b-izoh" style="margin:12px 0 0">Tugmani bosing — to‘lov uchun operator siz bilan bog‘lanadi.</p>'}
-          <button class="cta" type="button" id="toladim" style="width:100%;margin-top:14px">${h.karta ? 'To‘ladim' : 'To‘lov qilmoqchiman'}</button>
-          <p class="b-xato" id="tolovXato"></p>
-        </div>`;
-      kartaNusxa();
-      $('#toladim').onclick = async () => {
-        const t = $('#toladim'); t.disabled = true; t.textContent = 'Yuborilmoqda…'; $('#tolovXato').textContent = '';
-        try {
-          const r = await fetch(KAPI + '/course-page/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: KALIT, perWeek: n }) });
-          const d = await r.json().catch(() => ({}));
-          if (!r.ok) throw new Error(d.message || 'Yuborib bo‘lmadi');
-          holat = null; await holatYukla();
-        } catch (err) {
-          $('#tolovXato').textContent = err.message || 'Yuborib bo‘lmadi, qayta urinib ko‘ring';
-          t.disabled = false; t.textContent = h.karta ? 'To‘ladim' : 'To‘lov qilmoqchiman';
-        }
+  // Ustoz taklifi: yo'q — "Davom etmoqchiman"; so'ralgan — kutish; yuborilgan — to'lash (karta + chek)
+  function taklifQism(h, ustozIsm){
+    const o = h.taklif;
+    if (!o || o.holat === 'expired') {
+      return `${o ? '<div class="banner qizil" style="margin-bottom:12px"><span class="e">⏳</span><span>Oldingi taklif muddati tugadi — soatlar bo‘shadi.</span></div>' : ''}
+        <p class="b-izoh">Darsni davom ettirmoqchi bo‘lsangiz — tugmani bosing. ${ustozIsm} siz bilan kunlar va soatlarni kelishib, taklif yuboradi.</p>
+        <button class="cta" type="button" id="davomBtn" style="width:100%">Davom etmoqchiman</button><p class="b-xato" id="davomXato"></p>`;
+    }
+    if (o.holat === 'requested') {
+      return `<div class="banner sariq"><span class="e">📞</span><span>${ustozIsm} sizga taklif tayyorlayapti — kunlar va soatlarni kelishish uchun qo‘ng‘iroq qiladi.</span></div>`;
+    }
+    return `<div class="taklif-k">
+        <small style="font-weight:800;color:#0f766e;letter-spacing:.04em">USTOZINGIZ TAKLIFI</small>
+        <div class="kunlar-t">${esc(o.slotsText || '')}</div>
+        <div class="summa"><span>Haftada ${o.perWeek} marta · oyiga ${o.darslar} dars</span><b>${Number(o.narx || 0).toLocaleString('ru-RU')} so‘m</b></div>
+        <span class="muddat" id="taklifMuddat" data-exp="${esc(o.expiresAt || '')}">⏱ Soatlar sizga band</span>
+      </div>
+      ${h.karta ? kartaQuti(h.karta) : '<p class="b-izoh" style="margin:12px 0 0">Karta raqamini operator yuboradi.</p>'}
+      <ol class="qadamlar"><li>Shu kartaga <b>${Number(o.narx || 0).toLocaleString('ru-RU')} so‘m</b> o‘tkazing (Click, Payme yoki bank ilovasida)</li><li>To‘lov chekining skrinshotini yuklang va “To‘ladim” ni bosing</li></ol>
+      <label class="chek" id="chekLabel"><input type="file" id="chekFayl" accept="image/*,application/pdf"><span id="chekMatn">📎 Chek skrinshotini tanlang</span></label>
+      <button class="cta" type="button" id="toladim" style="width:100%;margin-top:12px" disabled>To‘ladim</button>
+      <p class="b-xato" id="tolovXato"></p>`;
+  }
+  function taklifUlash(h){
+    kartaNusxa();
+    const d = $('#davomBtn');
+    if (d) d.onclick = async () => {
+      d.disabled = true; d.textContent = 'Yuborilmoqda…'; $('#davomXato').textContent = '';
+      try {
+        const r = await fetch(KAPI + '/course-page/davom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: KALIT }) });
+        const x = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(x.message || 'Yuborib bo‘lmadi');
+        holat = null; await holatYukla();
+      } catch (e) { $('#davomXato').textContent = e.message; d.disabled = false; d.textContent = 'Davom etmoqchiman'; }
+    };
+    const m = $('#taklifMuddat');
+    if (m && m.dataset.exp) {
+      const yang = () => {
+        const q = new Date(m.dataset.exp).getTime() - Date.now();
+        if (!document.body.contains(m)) return clearInterval(tm);
+        m.textContent = q > 0 ? `⏱ ${Math.floor(q / 36e5)} soat ${Math.floor(q / 6e4) % 60} daqiqa ichida to‘lang — soatlar sizga band` : '⏳ Muddat tugadi';
       };
-      q.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
+      const tm = setInterval(yang, 30000); yang();
+    }
+    const f = $('#chekFayl'), t = $('#toladim');
+    if (!f || !t) return;
+    f.onchange = () => {
+      const bor = f.files && f.files[0];
+      $('#chekLabel').classList.toggle('bor', !!bor);
+      $('#chekMatn').textContent = bor ? `✅ ${bor.name}` : '📎 Chek skrinshotini tanlang';
+      t.disabled = !bor;
+    };
+    t.onclick = async () => {
+      const file = f.files && f.files[0]; if (!file) return;
+      if (file.size > 10 * 1024 * 1024) { $('#tolovXato').textContent = 'Fayl 10 MB dan katta'; return; }
+      t.disabled = true; t.textContent = 'Yuborilmoqda…'; $('#tolovXato').textContent = '';
+      try {
+        const fd = new FormData(); fd.append('t', KALIT); fd.append('offerId', h.taklif.id); fd.append('receipt', file);
+        const r = await fetch(KAPI + '/course-page/pay', { method: 'POST', body: fd });
+        const x = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(x.message || 'Yuborib bo‘lmadi');
+        holat = null; await holatYukla();
+      } catch (e) { $('#tolovXato').textContent = e.message || 'Yuborib bo‘lmadi, qayta urinib ko‘ring'; t.disabled = false; t.textContent = 'To‘ladim'; }
+    };
   }
   const YAXSHI = ['Tushunarli tushuntirdi', 'Ko‘p gapirtirdi', 'Samimiy va do‘stona', 'Xatolarimni ko‘rsatdi'];
   const YOMON = ['Ovoz yoki aloqa yomon', 'Juda tez gapirdi', 'Qiziq bo‘lmadi', 'Kech qoldi'];
@@ -1103,7 +1135,8 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       const h = await r.json();
       // Faqat muhim narsa o'zgarsa qayta chizamiz (sanoq va tanlangan tarif uzilib qolmasin)
       const kalitH = (x) => x ? [x.bosqich, x.startsAt || '', x.kirishOchiq ? 1 : 0, x.baho ? 1 : 0, x.tasdiqlanmoqda ? 1 : 0,
-        x.tolovRad || '', (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : ''].join('|') : '';
+        x.tolovRad || '', (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : '',
+        x.taklif ? `${x.taklif.id}:${x.taklif.holat}:${x.taklif.expiresAt || ''}` : ''].join('|') : '';
       if (kalitH(h) !== kalitH(holat)) chiz(h);
     } catch (e) { /* tarmoq xatosi — keyingi safar */ }
   }
