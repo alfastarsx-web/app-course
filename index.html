@@ -352,6 +352,23 @@ body.bosqichda .hero,body.bosqichda main,body.bosqichda footer,body.bosqichda .p
 .tarif strong{font-size:15px;margin-top:4px;font-variant-numeric:tabular-nums}
 .tarif small{font-size:11.5px;color:var(--mut);font-weight:600}
 .tarif.top{background:var(--sun-soft);border-color:#f3d67a}
+button.tarif{font:inherit;color:inherit;background:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 0 2px var(--teal) inset}
+.banner{border-radius:18px;padding:14px 16px;font-weight:700;font-size:15px;display:flex;gap:10px;align-items:flex-start}
+.banner.sariq{background:var(--sun-soft);color:#6b4e00}
+.banner.qizil{background:#fde8e6;color:#9a3b33}
+.banner .e{font-size:20px;line-height:1.2}
+.karta-quti{background:var(--navy);color:#fff;border-radius:18px;padding:16px;margin:12px 0}
+.karta-quti small{display:block;color:#9fb0c8;font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.karta-quti .kq-raqam{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+.karta-quti .kq-raqam b{font-family:'Unbounded';font-size:19px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.karta-quti button{border:0;border-radius:10px;padding:8px 12px;font:800 13px 'Manrope',sans-serif;background:#fff;color:var(--navy);cursor:pointer}
+.summa{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;margin-top:4px}
+.summa b{font-family:'Unbounded';font-size:22px;white-space:nowrap;margin-left:10px}
+.qadamlar{margin:12px 0 0;padding-left:20px;color:var(--mut);font-size:14.5px;display:grid;gap:4px}
+.dars-q{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--line);font-weight:700}
+.dars-q:first-of-type{border-top:0}
+.dars-q span{color:var(--mut);font-weight:600;font-size:14px}
 .b-xato:empty{display:none}
 .b-xato{color:var(--coral);text-align:center;font-weight:700;font-size:14px;min-height:1.2em;margin:8px 0 0}
 </style>
@@ -873,6 +890,7 @@ body.bosqichda .hero,body.bosqichda main,body.bosqichda footer,body.bosqichda .p
     } else if (h.bosqich === 'belgilandi') {
       el.innerHTML = bosh(h.ism, 'Bepul sinov darsi', 'Ustozingiz tayyor! 🎉', `${v.kun}, soat ${v.soat} da · 45–60 daqiqa`) + `
       <div class="b-ichi">
+        ${h.tasdiqlanmoqda ? '<div class="banner sariq"><span class="e">📞</span><span>Ustozingiz bir necha daqiqada qo‘ng‘iroq qilib, vaqtni tasdiqlaydi. Telefoningiz yoningizda bo‘lsin.</span></div>' : ''}
         <div class="b-kart">${ustozKart(h.ustoz || {})}</div>
         <div class="b-kart">
           <h3>Darsgacha qoldi</h3>
@@ -915,24 +933,105 @@ body.bosqichda .hero,body.bosqichda main,body.bosqichda footer,body.bosqichda .p
           ${ustozKart(u)}
           <h3 style="margin-top:16px">${ustozIsm} bilan davom etish</h3>
           <p class="b-izoh">Haftasiga necha marta o‘qishni tanlang. Oyiga 4 hafta hisobida.</p>
-          <div class="tariflar">${TARIFLAR.map(([n, narx]) => `
-            <div class="tarif${n === 3 ? ' top' : ''}"><b>${n}×</b><small>haftada</small><strong>${narx.toLocaleString('ru-RU')}</strong><small>so‘m / oy · ${n * 4} dars</small></div>`).join('')}
+          <div class="tariflar" id="tariflar">${tariflar(h).map(([n, narx]) => `
+            <button type="button" class="tarif${n === 3 ? ' top' : ''}" data-tarif="${n}" aria-pressed="false"><b>${n}×</b><small>haftada</small><strong>${narx.toLocaleString('ru-RU')}</strong><small>so‘m / oy · ${n * 4} dars</small></button>`).join('')}
           </div>
+          <div id="tolovQism" hidden></div>
         </div>
       </div>`;
+      if (h.tolovRad) $('.b-ichi').insertAdjacentHTML('afterbegin', `<div class="banner qizil"><span class="e">⚠️</span><span>Oldingi to‘lov tasdiqlanmadi: ${esc(h.tolovRad)}. Qayta urinib ko‘ring yoki @MT_yordam_bot ga yozing.</span></div>`);
       if (!h.baho) bahoUlash();
+      tolovUlash(h);
+    } else if (h.bosqich === 'tolov_tekshirilmoqda') {
+      const t = h.tolov || {};
+      el.innerHTML = bosh(h.ism, 'To‘lov', 'To‘lovingiz tekshirilmoqda ⏳', 'Pul tushgani tasdiqlanishi bilan bildirishnoma keladi va darslaringiz shu yerda chiqadi.') + `
+      <div class="b-ichi">
+        <div class="b-kart">
+          <div class="summa"><span>${t.perWeek ? `Haftada ${t.perWeek} marta · ${t.perWeek * 4} dars` : 'Oylik to‘lov'}</span><b>${Number(t.summa || 0).toLocaleString('ru-RU')} so‘m</b></div>
+          ${h.karta ? kartaQuti(h.karta) + '<p class="b-izoh" style="margin:0">Hali o‘tkazmagan bo‘lsangiz — shu kartaga o‘tkazing.</p>' : ''}
+          <p class="b-izoh" style="margin:12px 0 0">Odatda 1 soat ichida tekshiriladi (09:00–21:00). Savol bo‘lsa: <b>@MT_yordam_bot</b></p>
+        </div>
+      </div>`;
+      kartaNusxa();
     } else if (h.bosqich === 'kelmadi') {
       el.innerHTML = bosh(h.ism, 'Sinov darsi', 'Darsga ulgurmadingizmi?', 'Hech gap emas — boshqa qulay vaqtni tanlang.') + `
       <div class="b-ichi"><div class="b-kart markaz"><p style="margin:0 0 14px">Bepul sinov darsi hali ham siz uchun ochiq.</p><button class="cta" type="button" id="qaytaTanla" style="width:100%">Yangi vaqt tanlash</button></div></div>`;
       $('#qaytaTanla').onclick = vaqtOch;
+    } else if (h.bosqich === 'eskirgan') {
+      el.innerHTML = bosh('', 'Kurslar', 'Sahifani yangilang', 'Kurslar bo‘limini yopib, qayta oching — hammasi joyida bo‘ladi.');
     } else if (h.bosqich === 'oqiyapti') {
-      el.innerHTML = bosh(h.ism, 'Kurslarim', 'Darslaringiz davom etmoqda 💪', 'Ustozingiz bilan o‘qishni davom ettiryapsiz.') + `
-      <div class="b-ichi"><div class="b-kart markaz"><p style="margin:0">Dars jadvali va natijalaringiz tez orada shu yerda ham chiqadi.</p></div></div>`;
+      const darslar = h.darslar || [];
+      const ob = h.obuna;
+      el.innerHTML = bosh(h.ism, 'Kurslarim', 'Darslaringiz davom etmoqda 💪', ob ? `${ob.haftada ? `Haftada ${ob.haftada} marta · ` : ''}obuna ${vaqtYoz(ob.tugash).kun.toLowerCase()} gacha` : 'Ustozingiz bilan o‘qishni davom ettiryapsiz.') + `
+      <div class="b-ichi">
+        ${h.ustoz ? `<div class="b-kart">${ustozKart(h.ustoz)}</div>` : ''}
+        ${darslar.length ? `
+        <div class="b-kart">
+          <button class="kirish ${h.kirishOchiq ? 'ochiq' : ''}" id="kirishBtn" type="button" ${h.kirishOchiq ? '' : 'disabled'}>▶ Darsga kirish</button>
+          <p class="kirish-izoh" id="kirishIzoh">${h.kirishOchiq ? 'Darsga kiring — ustoz ham shu daqiqalarda qo‘shiladi' : `Keyingi dars: ${vaqtYoz(darslar[0].startsAt).kun}, ${vaqtYoz(darslar[0].startsAt).soat}. Tugma 10 daqiqa oldin yonadi`}</p>
+          <p class="b-xato" id="kirishXato"></p>
+        </div>
+        <div class="b-kart">
+          <h3>Keyingi darslar</h3>
+          ${darslar.map((d) => { const x = vaqtYoz(d.startsAt); return `<div class="dars-q">${x.kun}<span>${x.soat} · ${d.durationMin || 60} daq</span></div>`; }).join('')}
+        </div>` : `
+        <div class="b-kart markaz">
+          <p style="margin:0">📞 Ustozingiz tez orada qo‘ng‘iroq qilib, dars jadvalini siz bilan kelishadi. Jadval shu yerda chiqadi.</p>
+        </div>`}
+      </div>`;
+      const kb = $('#kirishBtn'); if (kb) kb.onclick = kirish;
     }
     pk();
   }
-  // Haftalik narxlar (oyiga) — mentor hamyoni HAFTALIK_NARXLAR bilan bir xil
+  // Haftalik narxlar (oyiga) — mentor hamyoni HAFTALIK_NARXLAR bilan bir xil (server yubormasa zaxira)
   const TARIFLAR = [[1, 350000], [2, 450000], [3, 550000], [4, 650000], [5, 750000], [6, 850000]];
+  const tariflar = (h) => (h && h.tariflar && h.tariflar.length ? h.tariflar.map((x) => [x.perWeek, x.narx]) : TARIFLAR);
+  function kartaQuti(k){
+    return `<div class="karta-quti"><small>Karta raqami</small>
+      <div class="kq-raqam"><b>${esc(k.raqam)}</b><button type="button" data-nusxa="${esc(String(k.raqam).replace(/\s/g, ''))}">Nusxa</button></div>
+      ${k.egasi ? `<small style="margin-top:8px">Egasi: ${esc(k.egasi)}</small>` : ''}</div>`;
+  }
+  function kartaNusxa(){
+    document.querySelectorAll('[data-nusxa]').forEach((b) => {
+      b.onclick = async () => {
+        try { await navigator.clipboard.writeText(b.dataset.nusxa); b.textContent = 'Nusxalandi ✓'; }
+        catch (e) { b.textContent = 'Bosib turib nusxalang'; }
+      };
+    });
+  }
+  // Tarif tanlash -> karta raqami -> "To'ladim"
+  function tolovUlash(h){
+    const box = $('#tariflar'); if (!box) return;
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tarif]'); if (!b) return;
+      box.querySelectorAll('[data-tarif]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      const n = Number(b.dataset.tarif);
+      const narx = (tariflar(h).find(([k]) => k === n) || [0, 0])[1];
+      const q = $('#tolovQism');
+      q.hidden = false;
+      q.innerHTML = `<div style="margin-top:16px">
+          <div class="summa"><span>Haftada ${n} marta · ${n * 4} dars</span><b>${narx.toLocaleString('ru-RU')} so‘m</b></div>
+          ${h.karta ? kartaQuti(h.karta) + `<ol class="qadamlar"><li>Shu kartaga <b>${narx.toLocaleString('ru-RU')} so‘m</b> o‘tkazing (Click, Payme yoki bank ilovasida)</li><li>“To‘ladim” tugmasini bosing — to‘lov tekshiriladi</li></ol>`
+                    : '<p class="b-izoh" style="margin:12px 0 0">Tugmani bosing — to‘lov uchun operator siz bilan bog‘lanadi.</p>'}
+          <button class="cta" type="button" id="toladim" style="width:100%;margin-top:14px">${h.karta ? 'To‘ladim' : 'To‘lov qilmoqchiman'}</button>
+          <p class="b-xato" id="tolovXato"></p>
+        </div>`;
+      kartaNusxa();
+      $('#toladim').onclick = async () => {
+        const t = $('#toladim'); t.disabled = true; t.textContent = 'Yuborilmoqda…'; $('#tolovXato').textContent = '';
+        try {
+          const r = await fetch(KAPI + '/course-page/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: KALIT, perWeek: n }) });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(d.message || 'Yuborib bo‘lmadi');
+          holat = null; await holatYukla();
+        } catch (err) {
+          $('#tolovXato').textContent = err.message || 'Yuborib bo‘lmadi, qayta urinib ko‘ring';
+          t.disabled = false; t.textContent = h.karta ? 'To‘ladim' : 'To‘lov qilmoqchiman';
+        }
+      };
+      q.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
   const YAXSHI = ['Tushunarli tushuntirdi', 'Ko‘p gapirtirdi', 'Samimiy va do‘stona', 'Xatolarimni ko‘rsatdi'];
   const YOMON = ['Ovoz yoki aloqa yomon', 'Juda tez gapirdi', 'Qiziq bo‘lmadi', 'Kech qoldi'];
   let baho = 0; const tanlangan = new Set();
@@ -998,10 +1097,13 @@ body.bosqichda .hero,body.bosqichda main,body.bosqichda footer,body.bosqichda .p
     if (!kalitli()) return;
     try {
       const r = await fetch(`${KAPI}/course-page/state?t=${encodeURIComponent(KALIT)}`);
-      if (!r.ok) return; // kalit eskirgan bo'lsa landing ko'rinaveradi
+      // Ilova ichida login so'ralmaydi: kalit eskirgan bo'lsa — "qayta oching" ekrani
+      if (r.status === 401) { if (!holat || holat.bosqich !== 'eskirgan') chiz({ bosqich: 'eskirgan' }); return; }
+      if (!r.ok) return;
       const h = await r.json();
-      // Faqat bosqich yoki vaqt o'zgarsa qayta chizamiz (sanoq uzilib qolmasin)
-      const kalitH = (x) => x ? `${x.bosqich}|${x.startsAt || ''}|${x.kirishOchiq ? 1 : 0}|${x.baho ? 1 : 0}` : '';
+      // Faqat muhim narsa o'zgarsa qayta chizamiz (sanoq va tanlangan tarif uzilib qolmasin)
+      const kalitH = (x) => x ? [x.bosqich, x.startsAt || '', x.kirishOchiq ? 1 : 0, x.baho ? 1 : 0, x.tasdiqlanmoqda ? 1 : 0,
+        x.tolovRad || '', (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : ''].join('|') : '';
       if (kalitH(h) !== kalitH(holat)) chiz(h);
     } catch (e) { /* tarmoq xatosi — keyingi safar */ }
   }
