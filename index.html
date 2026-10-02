@@ -946,11 +946,15 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       taklifUlash(h);
     } else if (h.bosqich === 'tolov_tekshirilmoqda') {
       const t = h.tolov || {};
+      const chekUrl = `${KAPI}/course-page/receipt?t=${encodeURIComponent(KALIT)}`;
       el.innerHTML = bosh(h.ism, 'To‘lov', 'To‘lovingiz tekshirilmoqda ⏳', 'Pul tushgani tasdiqlanishi bilan bildirishnoma keladi va darslaringiz shu yerda chiqadi.') + `
       <div class="b-ichi">
         <div class="b-kart">
           <div class="summa"><span>${t.perWeek ? `Haftada ${t.perWeek} marta · ${t.perWeek * 4} dars` : 'Oylik to‘lov'}</span><b>${Number(t.summa || 0).toLocaleString('ru-RU')} so‘m</b></div>
           ${h.taklif && h.taklif.slotsText ? `<p class="b-izoh" style="margin:6px 0 0">🗓️ ${esc(h.taklif.slotsText)} — soatlar sizga band</p>` : ''}
+          ${t.hasReceipt ? `<div class="banner sariq" style="margin-top:12px"><span class="e">✅</span><span>Chekingiz qabul qilindi va tekshiruvga yuborildi.</span></div>
+            ${t.receiptIsPdf ? `<a href="${esc(chekUrl)}" target="_blank" rel="noopener" style="display:block;margin-top:10px">📄 Yuklangan chekni ko‘rish (PDF)</a>`
+              : `<a href="${esc(chekUrl)}" target="_blank" rel="noopener" style="display:block;margin-top:10px"><img src="${esc(chekUrl)}" alt="Yuklangan to‘lov cheki" style="display:block;max-width:100%;max-height:240px;border-radius:12px;object-fit:contain"></a>`}` : ''}
           ${h.karta ? kartaQuti(h.karta) + '<p class="b-izoh" style="margin:0">Hali o‘tkazmagan bo‘lsangiz — shu kartaga o‘tkazing.</p>' : ''}
           <p class="b-izoh" style="margin:12px 0 0">Odatda 1 soat ichida tekshiriladi (09:00–21:00). Savol bo‘lsa: <b>@MT_yordam_bot</b></p>
         </div>
@@ -1061,6 +1065,11 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         const x = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(x.message || 'Yuborib bo‘lmadi');
         holat = null; await holatYukla();
+        if (holat?.bosqich !== 'tolov_tekshirilmoqda') {
+          t.textContent = 'Chek yuborildi ✓';
+          const xato = $('#tolovXato');
+          if (xato) xato.textContent = 'Chekingiz qabul qilindi. Holatni ko‘rish uchun Kurslar bo‘limini qayta oching.';
+        }
       } catch (e) { $('#tolovXato').textContent = e.message || 'Yuborib bo‘lmadi, qayta urinib ko‘ring'; t.disabled = false; t.textContent = 'To‘ladim'; }
     };
   }
@@ -1135,7 +1144,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       const h = await r.json();
       // Faqat muhim narsa o'zgarsa qayta chizamiz (sanoq va tanlangan tarif uzilib qolmasin)
       const kalitH = (x) => x ? [x.bosqich, x.startsAt || '', x.kirishOchiq ? 1 : 0, x.baho ? 1 : 0, x.tasdiqlanmoqda ? 1 : 0,
-        x.tolovRad || '', (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : '',
+        x.tolovRad || '', x.tolov?.hasReceipt ? 1 : 0, (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : '',
         x.taklif ? `${x.taklif.id}:${x.taklif.holat}:${x.taklif.expiresAt || ''}` : ''].join('|') : '';
       if (kalitH(h) !== kalitH(holat)) chiz(h);
     } catch (e) { /* tarmoq xatosi — keyingi safar */ }
