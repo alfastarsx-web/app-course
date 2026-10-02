@@ -961,6 +961,14 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         </div>
       </div>`;
       kartaNusxa();
+    } else if (h.bosqich === 'tolov_ustoz_kutilmoqda') {
+      const t = h.tolov || {};
+      el.innerHTML = bosh(h.ism, 'To‘lov', 'To‘lovingiz tasdiqlandi ✅', 'Operator to‘lovni tekshirdi. Endi ustozingiz darslarni faollashtiradi.') + `
+      <div class="b-ichi"><div class="b-kart">
+        <div class="summa"><span>${t.perWeek ? `Haftada ${t.perWeek} marta · ${t.perWeek * 4} dars` : 'Oylik to‘lov'}</span><b>${Number(t.summa || 0).toLocaleString('ru-RU')} so‘m</b></div>
+        ${h.taklif?.slotsText ? `<p class="b-izoh" style="margin:10px 0 0">🗓️ ${esc(h.taklif.slotsText)} — soatlar siz uchun band</p>` : ''}
+        <div class="banner sariq" style="margin-top:14px"><span class="e">⏳</span><span>Ustozingizning tasdig‘i kutilmoqda. Darslar faollashgach, shu yerda ko‘rinadi va sizga xabar keladi.</span></div>
+      </div></div>`;
     } else if (h.bosqich === 'kelmadi') {
       el.innerHTML = bosh(h.ism, 'Sinov darsi', 'Darsga ulgurmadingizmi?', 'Hech gap emas — boshqa qulay vaqtni tanlang.') + `
       <div class="b-ichi"><div class="b-kart markaz"><p style="margin:0 0 14px">Bepul sinov darsi hali ham siz uchun ochiq.</p><button class="cta" type="button" id="qaytaTanla" style="width:100%">Yangi vaqt tanlash</button></div></div>`;
