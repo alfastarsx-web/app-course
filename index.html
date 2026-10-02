@@ -358,11 +358,11 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
 .banner.sariq{background:var(--sun-soft);color:#6b4e00}
 .banner.qizil{background:#fde8e6;color:#9a3b33}
 .banner .e{font-size:20px;line-height:1.2}
-.karta-quti{background:var(--navy);color:#fff;border-radius:18px;padding:16px;margin:12px 0}
+.karta-quti{display:block;width:100%;background:var(--navy);color:#fff;border:0;border-radius:18px;padding:16px;margin:12px 0;text-align:left;cursor:pointer;font:inherit}
 .karta-quti small{display:block;color:#9fb0c8;font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
 .karta-quti .kq-raqam{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
-.karta-quti .kq-raqam b{font-family:'Unbounded';font-size:19px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
-.karta-quti button{border:0;border-radius:10px;padding:8px 12px;font:800 13px 'Manrope',sans-serif;background:#fff;color:var(--navy);cursor:pointer}
+.karta-quti .kq-raqam b{font-family:'Unbounded';font-size:clamp(14px,4vw,19px);letter-spacing:.04em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.karta-quti .kq-copy{flex:none;border-radius:10px;padding:8px 12px;font:800 13px 'Manrope',sans-serif;background:#fff;color:var(--navy)}
 .summa{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;margin-top:4px}
 .summa b{font-family:'Unbounded';font-size:22px;white-space:nowrap;margin-left:10px}
 .qadamlar{margin:12px 0 0;padding-left:20px;color:var(--mut);font-size:14.5px;display:grid;gap:4px}
@@ -593,6 +593,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   // Kurslar tab'i: ilova sahifani ?t=<kalit> bilan ochadi — o'quvchi kimligi kalitdan
   const KALIT = new URLSearchParams(location.search).get('t') || '';
   const KAPI = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8077/api' : 'https://ai.myteacher.uz/api';
+  const TOLOV_KARTA = { raqam: '9860010106200552', egasi: 'Orinova Alfiya' };
   const kalitli = () => !!KALIT;
   // Ilova do'konlari (www.myteacher.uz bilan bir xil)
   const IOS_URL = 'https://testflight.apple.com/join/NBNHurR2';
@@ -955,7 +956,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
           ${t.hasReceipt ? `<div class="banner sariq" style="margin-top:12px"><span class="e">✅</span><span>Chekingiz qabul qilindi va tekshiruvga yuborildi.</span></div>
             ${t.receiptIsPdf ? `<a href="${esc(chekUrl)}" target="_blank" rel="noopener" style="display:block;margin-top:10px">📄 Yuklangan chekni ko‘rish (PDF)</a>`
               : `<a href="${esc(chekUrl)}" target="_blank" rel="noopener" style="display:block;margin-top:10px"><img src="${esc(chekUrl)}" alt="Yuklangan to‘lov cheki" style="display:block;max-width:100%;max-height:240px;border-radius:12px;object-fit:contain"></a>`}` : ''}
-          ${h.karta ? kartaQuti(h.karta) + '<p class="b-izoh" style="margin:0">Hali o‘tkazmagan bo‘lsangiz — shu kartaga o‘tkazing.</p>' : ''}
+          ${kartaQuti() + '<p class="b-izoh" style="margin:0">Hali o‘tkazmagan bo‘lsangiz — shu kartaga o‘tkazing.</p>'}
           <p class="b-izoh" style="margin:12px 0 0">Odatda 1 soat ichida tekshiriladi (09:00–21:00). Savol bo‘lsa: <b>@MT_yordam_bot</b></p>
         </div>
       </div>`;
@@ -990,16 +991,35 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     }
     pk();
   }
-  function kartaQuti(k){
-    return `<div class="karta-quti"><small>Karta raqami</small>
-      <div class="kq-raqam"><b>${esc(k.raqam)}</b><button type="button" data-nusxa="${esc(String(k.raqam).replace(/\s/g, ''))}">Nusxa</button></div>
-      ${k.egasi ? `<small style="margin-top:8px">Egasi: ${esc(k.egasi)}</small>` : ''}</div>`;
+  function kartaQuti(){
+    const k = TOLOV_KARTA;
+    const raqam = String(k.raqam).replace(/\D/g, '');
+    const korinish = raqam.replace(/(\d{4})(?=\d)/g, '$1 ');
+    return `<button class="karta-quti" type="button" data-nusxa="${esc(raqam)}" aria-label="To‘lov uchun karta ${esc(korinish)}. Nusxalash uchun bosing">
+      <small>To‘lov uchun karta · nusxalash uchun bosing</small>
+      <span class="kq-raqam"><b>${esc(korinish)}</b><span class="kq-copy" aria-live="polite">Nusxa</span></span>
+      <small style="margin-top:8px">${esc(k.egasi)}</small></button>`;
   }
   function kartaNusxa(){
     document.querySelectorAll('[data-nusxa]').forEach((b) => {
       b.onclick = async () => {
-        try { await navigator.clipboard.writeText(b.dataset.nusxa); b.textContent = 'Nusxalandi ✓'; }
-        catch (e) { b.textContent = 'Bosib turib nusxalang'; }
+        const matn = b.querySelector('.kq-copy');
+        let copied = false;
+        if (navigator.clipboard?.writeText) {
+          try { await navigator.clipboard.writeText(b.dataset.nusxa); copied = true; }
+          catch (e) { /* Ayrim WebView'larda clipboard API bloklangan — eski usulni sinaymiz */ }
+        }
+        if (!copied) {
+          const input = document.createElement('textarea');
+          input.value = b.dataset.nusxa;
+          input.setAttribute('readonly', '');
+          input.style.position = 'fixed'; input.style.opacity = '0';
+          document.body.appendChild(input);
+          try { input.select(); copied = document.execCommand('copy'); }
+          catch (e) { copied = false; }
+          finally { input.remove(); }
+        }
+        matn.textContent = copied ? 'Copied ✓' : 'Nusxalanmadi';
       };
     });
   }
@@ -1020,7 +1040,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         <div class="summa"><span>Haftada ${o.perWeek} marta · oyiga ${o.darslar} dars</span><b>${Number(o.narx || 0).toLocaleString('ru-RU')} so‘m</b></div>
         <span class="muddat" id="taklifMuddat" data-exp="${esc(o.expiresAt || '')}">⏱ Soatlar sizga band</span>
       </div>
-      ${h.karta ? kartaQuti(h.karta) : '<p class="b-izoh" style="margin:12px 0 0">Karta raqamini operator yuboradi.</p>'}
+      ${kartaQuti()}
       <ol class="qadamlar"><li>Shu kartaga <b>${Number(o.narx || 0).toLocaleString('ru-RU')} so‘m</b> o‘tkazing (Click, Payme yoki bank ilovasida)</li><li>To‘lov chekining skrinshotini yuklang va “To‘ladim” ni bosing</li></ol>
       <label class="chek" id="chekLabel"><input type="file" id="chekFayl" accept="image/*,application/pdf"><span id="chekMatn">📎 Chek skrinshotini tanlang</span></label>
       <button class="cta" type="button" id="toladim" style="width:100%;margin-top:12px" disabled>To‘ladim</button>
