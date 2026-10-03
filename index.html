@@ -202,6 +202,8 @@ summary::-webkit-details-marker{display:none}
 summary::after{content:"+";position:absolute;right:18px;top:50%;translate:0 -50%;width:28px;height:28px;border-radius:50%;background:var(--teal-soft);color:var(--teal);display:grid;place-items:center;font-size:20px;transition:transform .25s}
 details[open] summary::after{transform:rotate(45deg)}
 details p{margin:0;padding:0 18px 18px;color:var(--mut);font-size:15.5px}
+.pay-ichi{padding:0 14px 14px}
+.pay-ichi .karta-quti{margin-top:0}
 
 /* yakun */
 .yakun{background:radial-gradient(80% 90% at 50% 0%,#16435a,var(--navy));color:#fff;border-radius:34px;padding:44px 24px;text-align:center;position:relative;overflow:hidden}
@@ -591,7 +593,13 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   // Ilova rejimi faqat o'z TrialLandingView'imizda (lesson.myteacher.uz): u yerda trialBook/trialRequest handlerlari bor.
   // app-course.myteacher.uz ham WebView'da ochiladi, lekin handlerlarsiz — u yerda oddiy forma.
   // Kurslar tab'i: ilova sahifani ?t=<kalit> bilan ochadi — o'quvchi kimligi kalitdan
-  const KALIT = new URLSearchParams(location.search).get('t') || '';
+  // Click'dan qaytganda (?click=1) kalit manzilda bo'lmaydi — u Click'ga yuborilmasin; sessiyadan olamiz
+  const KALIT = (() => {
+    const t = new URLSearchParams(location.search).get('t') || '';
+    try { if (t) sessionStorage.setItem('kurs_t', t); else return sessionStorage.getItem('kurs_t') || ''; } catch (e) { /* saqlab bo'lmasa ham ishlayveradi */ }
+    return t;
+  })();
+  const CLICKDAN = new URLSearchParams(location.search).get('click') === '1';
   const KAPI = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8077/api' : 'https://ai.myteacher.uz/api';
   const kalitli = () => !!KALIT;
   // Ilova do'konlari (www.myteacher.uz bilan bir xil)
@@ -1016,11 +1024,18 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         <div class="summa"><span>Haftada ${o.perWeek} marta · oyiga ${o.darslar} dars</span><b>${Number(o.narx || 0).toLocaleString('ru-RU')} so‘m</b></div>
         <span class="muddat" id="taklifMuddat" data-exp="${esc(o.expiresAt || '')}">⏱ Soatlar sizga band</span>
       </div>
+      ${h.click ? `
+      ${CLICKDAN ? '<div class="banner sariq" style="margin-top:12px"><span class="e">⏳</span><span>To‘lagan bo‘lsangiz — bir necha soniyada tasdiqlanadi va darslaringiz shu yerda chiqadi.</span></div>' : ''}
+      <button class="cta" type="button" id="clickBtn" style="width:100%;margin-top:12px">💳 Click orqali to‘lash</button>
+      <p class="b-izoh" style="margin:6px 0 0;text-align:center">Uzcard, Humo yoki Click hamyoni — to‘lov darhol tasdiqlanadi</p>
+      <p class="b-xato" id="clickXato"></p>
+      <details class="karta-yol" style="margin-top:12px"><summary>Yoki karta raqamiga o‘tkazib, chek yuklang</summary><div class="pay-ichi">` : ''}
       ${h.karta ? kartaQuti(h.karta) : '<p class="b-izoh" style="margin:12px 0 0">Karta raqamini operator yuboradi.</p>'}
       <ol class="qadamlar"><li>Shu kartaga <b>${Number(o.narx || 0).toLocaleString('ru-RU')} so‘m</b> o‘tkazing (Click, Payme yoki bank ilovasida)</li><li>To‘lov chekining skrinshotini yuklang va “To‘ladim” ni bosing</li></ol>
       <label class="chek" id="chekLabel"><input type="file" id="chekFayl" accept="image/*,application/pdf"><span id="chekMatn">📎 Chek skrinshotini tanlang</span></label>
       <button class="cta" type="button" id="toladim" style="width:100%;margin-top:12px" disabled>To‘ladim</button>
-      <p class="b-xato" id="tolovXato"></p>`;
+      <p class="b-xato" id="tolovXato"></p>
+      ${h.click ? '</div></details>' : ''}`;
   }
   function taklifUlash(h){
     kartaNusxa();
@@ -1043,6 +1058,17 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       };
       const tm = setInterval(yang, 30000); yang();
     }
+    const cb = $('#clickBtn');
+    if (cb) cb.onclick = async () => {
+      cb.disabled = true; cb.textContent = 'Click ochilmoqda…'; $('#clickXato').textContent = '';
+      try {
+        const r = await fetch(KAPI + '/course-page/click', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ t: KALIT, offerId: h.taklif.id, returnUrl: location.origin + location.pathname + '?click=1' }) });
+        const x = await r.json().catch(() => ({}));
+        if (!r.ok || !x.payUrl) throw new Error(x.message || 'Click’ni ochib bo‘lmadi');
+        location.href = x.payUrl;
+      } catch (e) { $('#clickXato').textContent = e.message || 'Click’ni ochib bo‘lmadi, qayta urinib ko‘ring'; cb.disabled = false; cb.textContent = '💳 Click orqali to‘lash'; }
+    };
     const f = $('#chekFayl'), t = $('#toladim');
     if (!f || !t) return;
     f.onchange = () => {
@@ -1143,6 +1169,8 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   if (kalitli()) {
     holatYukla();
     soroqT = setInterval(() => { if (!document.hidden) holatYukla(); }, 30000);
+    // Click'dan qaytdi — tasdiq bir necha soniyada keladi, birinchi daqiqada tez-tez tekshiramiz
+    if (CLICKDAN) { let n = 0; const tez = setInterval(() => { if (++n > 12) clearInterval(tez); else holatYukla(); }, 5000); }
     document.addEventListener('visibilitychange', () => { if (!document.hidden) holatYukla(); });
   }
 })();
