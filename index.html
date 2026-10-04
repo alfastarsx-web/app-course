@@ -886,9 +886,14 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   function bosh(ism, kichik, sarlavha, matn){
     return `<div class="b-bosh">${ism ? `<div class="b-salom">Salom, ${esc(ism)} 👋</div>` : ''}<small>${esc(kichik)}</small><h2>${sarlavha}</h2>${matn ? `<p>${matn}</p>` : ''}</div>`;
   }
+  // API rasm yo'lini (uploads/ ichida) qaytaradi — kichik nusxasi /thumb orqali olinadi
+  function rasmUrl(yol){
+    if (/^https?:\/\//.test(yol)) return yol;
+    return `${KAPI}/thumb?path=${encodeURIComponent(yol)}&size=256`;
+  }
   function ustozKart(u){
     const bosh_harf = esc((u.ism || 'U').trim()[0] || 'U');
-    const rasm = u.rasm ? `<img src="${esc(u.rasm)}" alt="">` : bosh_harf;
+    const rasm = u.rasm ? `<img src="${esc(rasmUrl(u.rasm))}" alt="" onerror="this.replaceWith(document.createTextNode('${bosh_harf}'))">` : bosh_harf;
     const baho = u.reyting ? `<span><span class="yulduz">★</span> ${u.reyting.toFixed(1)} · ${u.baholar} ta baho</span>` : '<span>Sertifikatli ustoz</span>';
     return `<div class="ustoz-k"><div class="av">${rasm}</div><div><b>${esc(u.ism)}</b>${baho}</div></div>`;
   }
