@@ -971,8 +971,10 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
           ${h.karta ? kartaQuti(h.karta) + '<p class="b-izoh" style="margin:0">Hali o‘tkazmagan bo‘lsangiz — shu kartaga o‘tkazing.</p>' : ''}
           <p class="b-izoh" style="margin:12px 0 0">Odatda 1 soat ichida tekshiriladi (09:00–21:00). Savol bo‘lsa: <b>@MT_yordam_bot</b></p>
         </div>
+        ${bahosizKart(h)}
       </div>`;
       kartaNusxa();
+      if (h.bahosiz) bahoUlash(h.bahosiz.bookingId);
     } else if (h.bosqich === 'kelmadi') {
       el.innerHTML = bosh(h.ism, 'Sinov darsi', 'Darsga ulgurmadingizmi?', 'Hech gap emas — boshqa qulay vaqtni tanlang.') + `
       <div class="b-ichi"><div class="b-kart markaz"><p style="margin:0 0 14px">Bepul sinov darsi hali ham siz uchun ochiq.</p><button class="cta" type="button" id="qaytaTanla" style="width:100%">Yangi vaqt tanlash</button></div></div>`;
@@ -985,6 +987,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       el.innerHTML = bosh(h.ism, 'Kurslarim', 'Darslaringiz davom etmoqda 💪', ob ? `${ob.haftada ? `Haftada ${ob.haftada} marta · ` : ''}obuna ${vaqtYoz(ob.tugash).kun.toLowerCase()} gacha` : 'Ustozingiz bilan o‘qishni davom ettiryapsiz.') + `
       <div class="b-ichi">
         ${h.ustoz ? `<div class="b-kart">${ustozKart(h.ustoz)}</div>` : ''}
+        ${bahosizKart(h)}
         ${darslar.length ? `
         <div class="b-kart">
           <button class="kirish ${h.kirishOchiq ? 'ochiq' : ''}" id="kirishBtn" type="button" ${h.kirishOchiq ? '' : 'disabled'}>▶ Darsga kirish</button>
@@ -1000,6 +1003,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         </div>`}
       </div>`;
       const kb = $('#kirishBtn'); if (kb) kb.onclick = kirish;
+      if (h.bahosiz) bahoUlash(h.bahosiz.bookingId);
     }
     pk();
   }
@@ -1156,8 +1160,8 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   const YAXSHI = ['Tushunarli tushuntirdi', 'Ko‘p gapirtirdi', 'Samimiy va do‘stona', 'Xatolarimni ko‘rsatdi'];
   const YOMON = ['Ovoz yoki aloqa yomon', 'Juda tez gapirdi', 'Qiziq bo‘lmadi', 'Kech qoldi'];
   let baho = 0; const tanlangan = new Set();
-  function bahoForma(ustozIsm){
-    return `<h3>Dars qanday o‘tdi?</h3>
+  function bahoForma(ustozIsm, sarlavha = 'Dars qanday o‘tdi?'){
+    return `<h3>${sarlavha}</h3>
       <p class="b-izoh">Bahoyingiz ${ustozIsm}ga ham, bizga ham darslarni yaxshilashga yordam beradi.</p>
       <div class="yulduzlar" role="radiogroup" aria-label="Baho">${[1, 2, 3, 4, 5].map((n) => `<button type="button" role="radio" aria-checked="false" aria-label="${n} yulduz" data-baho="${n}">★</button>`).join('')}</div>
       <div id="bahoQolgan" hidden>
@@ -1170,7 +1174,13 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   function bahoRahmat(n){
     return `<div class="markaz"><div class="yulduzlar kichik" aria-label="${n} yulduz">${'★'.repeat(n)}<span>${'★'.repeat(5 - n)}</span></div><h3 style="margin:6px 0 4px">Rahmat!</h3><p class="b-izoh" style="margin:0">Bahoyingiz qabul qilindi.</p></div>`;
   }
-  function bahoUlash(){
+  // Oxirgi baholanmagan dars (Kurslar → to'lovdan keyin ham) uchun kartani chiqaradi
+  function bahosizKart(h){
+    const b = h.bahosiz; if (!b) return '';
+    const x = vaqtYoz(b.startsAt), ustozIsm = esc((b.ustoz || 'Ustoz').split(' ')[0]);
+    return `<div class="b-kart" id="bahoKart">${bahoForma(ustozIsm, b.sinov ? 'Sinov darsi qanday o‘tdi?' : `${x.kun} dars qanday o‘tdi?`)}</div>`;
+  }
+  function bahoUlash(bookingId){
     const k = $('#bahoKart');
     k.querySelector('.yulduzlar').addEventListener('click', (e) => {
       const b = e.target.closest('[data-baho]'); if (!b) return;
@@ -1189,11 +1199,11 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       const btn = $('#bahoYubor'); btn.disabled = true; btn.textContent = 'Yuborilmoqda…'; $('#bahoXato').textContent = '';
       const izoh = [...tanlangan, $('#bahoIzoh').value.trim()].filter(Boolean).join('. ');
       try {
-        const r = await fetch(KAPI + '/course-page/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: KALIT, rating: baho, comment: izoh }) });
+        const r = await fetch(KAPI + '/course-page/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: KALIT, rating: baho, comment: izoh, ...(bookingId ? { bookingId } : {}) }) });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(d.message || 'Yuborib bo‘lmadi');
         $('#bahoKart').innerHTML = bahoRahmat(baho);
-        if (holat) holat.baho = baho;
+        if (holat) { if (bookingId) holat.bahosiz = null; else holat.baho = baho; }
         if (baho >= 4) konfetti();
       } catch (e) {
         $('#bahoXato').textContent = e.message || 'Yuborib bo‘lmadi, qayta urinib ko‘ring';
@@ -1225,7 +1235,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       // Faqat muhim narsa o'zgarsa qayta chizamiz (sanoq va tanlangan tarif uzilib qolmasin)
       const kalitH = (x) => x ? [x.bosqich, x.startsAt || '', x.kirishOchiq ? 1 : 0, x.baho ? 1 : 0, x.tasdiqlanmoqda ? 1 : 0,
         x.tolovRad || '', (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : '',
-        x.taklif ? `${x.taklif.id}:${x.taklif.holat}:${x.taklif.expiresAt || ''}` : ''].join('|') : '';
+        x.taklif ? `${x.taklif.id}:${x.taklif.holat}:${x.taklif.expiresAt || ''}` : '', x.bahosiz ? x.bahosiz.bookingId : ''].join('|') : '';
       if (kalitH(h) !== kalitH(holat)) chiz(h);
     } catch (e) { /* tarmoq xatosi — keyingi safar */ }
   }
