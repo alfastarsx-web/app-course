@@ -388,6 +388,29 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
 .bron-summa em{font-style:normal;font-weight:700;color:var(--mut)}
 .b-xato:empty{display:none}
 .b-xato{color:var(--coral);text-align:center;font-weight:700;font-size:14px;min-height:1.2em;margin:8px 0 0}
+/* kamera va mikrofon tekshiruvi */
+.kam-k{border:2px solid var(--sun)}
+.kam-k.tayyor{border-color:var(--teal);background:var(--teal-soft)}
+.kam-k.xato{border-color:var(--coral)}
+.kam-belgi{display:inline-block;background:var(--sun);color:var(--navy);font-weight:800;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:5px 10px;margin-bottom:10px}
+.kam-k.xato .kam-belgi{background:var(--coral);color:#fff}
+.kam-k p{margin:0 0 14px;font-size:15px;line-height:1.5;color:var(--ink)}
+.kam-k .cta{width:100%}
+.kam-k .kam-qayta{all:unset;cursor:pointer;color:var(--teal);font-weight:800;font-size:14px;text-decoration:underline}
+.kam-ok-q{display:flex;gap:12px;align-items:center}
+.kam-ok-q b{font-size:16px}
+.kam-ok-q span{display:block;color:var(--mut);font-size:14px;margin-top:2px}
+.kam-ok-q i{flex:none;width:40px;height:40px;border-radius:12px;background:#fff;display:grid;place-items:center;font-style:normal;font-size:20px}
+.kam-oyna{position:relative;border-radius:18px;overflow:hidden;background:var(--navy);aspect-ratio:4/3;max-height:260px;margin:0 auto 12px}
+.kam-oyna video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+.kam-mik{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.kam-chiziq{flex:1;height:12px;border-radius:999px;background:var(--line);overflow:hidden}
+.kam-chiziq i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--teal-2));transition:width .08s linear}
+.kam-qadam{margin:0 0 12px;padding-left:22px;display:grid;gap:7px;font-size:15px;line-height:1.45}
+.kam-k details{margin:0 0 14px;border-top:1px solid var(--line);padding-top:10px}
+.oyna .kam-k{text-align:left;margin-bottom:16px;box-shadow:none}
+.oyna .kam-k p{color:var(--ink);margin:0 0 14px}
+.kam-k summary{cursor:pointer;font-weight:800;font-size:15px;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -708,7 +731,12 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     $('#oyna').hidden = false; pk(); konfetti();
     try { navigator.vibrate && navigator.vibrate([30, 40, 60]); } catch (e) {}
   }
-  $('#oynaYop').onclick = () => { $('#oyna').hidden = true; pk(); if (yozildi && kalitli()) holatYukla(); };
+  $('#oynaYop').onclick = () => {
+    $('#oyna').hidden = true; pk();
+    // Tekshiruv kartasi oynadan bosqich ekraniga o'tadi
+    const ok = $('#oyna .kam-k'); if (ok) { ok.remove(); kamStop(); if (holat && holat.bosqich !== 'yangi') chiz(holat); }
+    if (yozildi && kalitli()) holatYukla();
+  };
 
   // ---- yozilish ----
   let band = false;
@@ -806,10 +834,13 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       $('#vaqtOyna').hidden = true;
       $('#oynaS').textContent = `${matn} — siz yozildingiz!`;
       $('#oynaMatn').innerHTML = 'Tabriklaymiz!<span class="e">🎉</span>Ustoz biriktirilishi bilan sizga xabar beramiz.';
-      $('#oynaYol').innerHTML = qollanma(tanSoat.startsAt);
-      $('#oynaYol').hidden = false;
       // Brauzerdan yozilgan — ilova hali yo'q: avval yuklab olish
       const vebdan = !ilova() && !kalitli();
+      // Yozilgan zahoti — birinchi vazifa: kamera va mikrofon ruxsatini tekshirish
+      $('#oynaYol').innerHTML = '';
+      $('#oynaYol').innerHTML = (vebdan ? '' : kamKart()) + qollanma(tanSoat.startsAt);
+      $('#oynaYol').hidden = false;
+      if (!vebdan) kamDastlab();
       $('#oynaIlova').innerHTML = vebdan ? ilovaBlok(body.phone) : '';
       $('#oynaIlova').hidden = !vebdan;
       yozildi = true;
@@ -861,6 +892,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     const dars = vaqtYoz(start);
     const esl = eslatmaVaqti(start);
     const qadamlar = [
+      ['📷', 'Hozir', '<span id="kamQadam"><b>Kamera va mikrofonni tekshiring</b> — darsda ovoz eshitilmay qolmasligi uchun (yuqoridagi tugma).</span>'],
       ['✅', 'Hozir', 'So‘rovingiz qabul qilindi. Ustoz biriktirilishi bilan bildirishnoma keladi.'],
     ];
     // Dars yaqin bo'lsa asosiy eslatma ketmaydi (backend ham yubormaydi)
@@ -880,8 +912,140 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     </div>`;
   }
 
+  // ---- kamera va mikrofon tekshiruvi ----
+  // Ko'p o'quvchi telefon sozlamasida ruxsat bermagani uchun darsda ovoz eshitmay qoladi.
+  // Ruxsatni dars kunidan oldin, yozilgan zahoti tekshirib qo'yamiz; darsga kirishda ham tekshiriladi.
+  let kamOk = false, kamOqim = null, kamAudio = null, kamRaf = 0, kamT = null;
+  const kamQollaydi = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  function kamStop(){
+    cancelAnimationFrame(kamRaf); clearTimeout(kamT);
+    if (kamOqim) kamOqim.getTracks().forEach((t) => t.stop());
+    if (kamAudio) kamAudio.close().catch(() => {});
+    kamOqim = kamAudio = null;
+  }
+  const IPHONE_QADAM = `<ol class="kam-qadam">
+      <li>Telefonda <b>Sozlamalar</b> (⚙️ Settings) ni oching.</li>
+      <li>Pastga tushib, <b>AI Teacher</b> ilovasini toping.</li>
+      <li><b>Kamera</b> va <b>Mikrofon</b> tugmalarini yoqing (yashil bo‘lsin).</li>
+      <li>Ilovaga qaytib, <b>“Qayta tekshirish”</b> ni bosing. Ilova qayta ochilsa, bu normal holat.</li>
+    </ol>`;
+  const ANDROID_QADAM = `<ol class="kam-qadam">
+      <li>Telefonda <b>Sozlamalar</b> → <b>Ilovalar</b> → <b>My AI Teacher</b> ni oching. (Yoki ilova belgisini bosib turing → ⓘ <b>“Ilova haqida”</b>.)</li>
+      <li><b>Ruxsatlar</b> bo‘limiga kiring.</li>
+      <li><b>Kamera</b> va <b>Mikrofon</b> → <b>“Ilovadan foydalanishda ruxsat berish”</b> ni tanlang.</li>
+      <li>Ilovaga qaytib, <b>“Qayta tekshirish”</b> ni bosing.</li>
+    </ol>`;
+  const BRAUZER_QADAM = `<ol class="kam-qadam">
+      <li><b>iPhone (Safari):</b> manzil satridagi <b>aA</b> → <b>Veb-sayt sozlamalari</b> → Kamera va Mikrofon → <b>Ruxsat berish</b>.</li>
+      <li><b>Android (Chrome):</b> manzil yonidagi 🔒 belgisi → <b>Ruxsatlar</b> → Kamera va Mikrofon → <b>Ruxsat berish</b>.</li>
+      <li>Sahifani yangilang va <b>“Qayta tekshirish”</b> ni bosing.</li>
+    </ol>`;
+  function kamBoshHtml(){
+    return `<span class="kam-belgi">⚠️ Diqqat — muhim vazifa</span>
+      <h3>Kamera va mikrofonni tekshiring</h3>
+      <p>Ko‘pchilik o‘quvchilar telefon sozlamalarida kamera va mikrofonga ruxsat bermagani uchun darsda ovozni eshitmay qoladi va buni nosozlik deb o‘ylaydi. Sizda bunday bo‘lmasligi uchun keling, hozir tekshirib, tayyorlab qo‘yamiz — 10 soniyalik ish.</p>
+      <button class="cta" type="button" data-kam="sina">📷 Kamera va mikrofonni tekshirish</button>`;
+  }
+  function kamOkHtml(){
+    return `<div class="kam-ok-q"><i>✅</i><div><b>Kamera va mikrofon tayyor</b><span>Darsda ustozni eshitasiz, u sizni ko‘radi va eshitadi.</span></div></div>
+      <p style="margin:12px 0 0"><button class="kam-qayta" type="button" data-kam="sina">Qayta tekshirish</button></p>`;
+  }
+  function kamXatoHtml(s){
+    if (s.tur === 'band') return `<span class="kam-belgi">Kamera band</span>
+      <p>Kamera yoki mikrofon hozir boshqa ilovada ishlatilyapti (masalan, video qo‘ng‘iroqda). O‘sha ilovani yoping va qayta tekshiring.</p>
+      <button class="cta" type="button" data-kam="sina">🔄 Qayta tekshirish</button>`;
+    if (s.tur === 'topilmadi') return `<span class="kam-belgi">Topilmadi</span>
+      <p>Telefonda kamera yoki mikrofon topilmadi. Quloqchin ulangan bo‘lsa, uni bir chiqarib, qayta ulang va tekshiring.</p>
+      <button class="cta" type="button" data-kam="sina">🔄 Qayta tekshirish</button>`;
+    if (s.tur === 'yoq') return `<span class="kam-belgi">Eski versiya</span>
+      <p>Bu oynada kamera ishlamayapti. MyTeacher ilovasini <b>App Store</b> yoki <b>Play Market</b>dan yangilang va qayta kiring.</p>`;
+    const nima = s.mik === false && s.kam !== false ? 'Mikrofonga' : s.kam === false && s.mik !== false ? 'Kameraga' : 'Kamera va mikrofonga';
+    const qadamlar = !ilova() ? BRAUZER_QADAM
+      : iosmi() ? `${IPHONE_QADAM}<details><summary>Android telefonda qanday?</summary>${ANDROID_QADAM}</details>`
+      : `${ANDROID_QADAM}<details><summary>iPhone'da qanday?</summary>${IPHONE_QADAM}</details>`;
+    return `<span class="kam-belgi">❌ Ruxsat berilmagan</span>
+      <h3>${nima} ruxsat yo‘q</h3>
+      <p>Shu holatda darsda ustozni eshitmaysiz va u sizni ko‘rmaydi. Telefon sozlamasida ruxsat bering — 30 soniyalik ish:</p>
+      ${qadamlar}
+      <button class="cta" type="button" data-kam="sina">🔄 Qayta tekshirish</button>`;
+  }
+  function kamChiz(holatK, s){
+    const k = $('#kamKart'); if (!k) return;
+    k.classList.toggle('tayyor', holatK === 'ok'); k.classList.toggle('xato', holatK === 'xato');
+    k.innerHTML = holatK === 'ok' ? kamOkHtml() : holatK === 'xato' ? kamXatoHtml(s) : kamBoshHtml();
+    const q = $('#kamQadam'); if (q && holatK === 'ok') q.innerHTML = 'Kamera va mikrofon tekshirildi — tayyor ✅';
+  }
+  // Oyna ochiq turganda karta oynada — bosqich ekranida takrorlanmaydi
+  const kamKart = () => $('#oyna .kam-k') ? '' : '<div class="b-kart kam-k" id="kamKart"></div>';
+  // Ruxsat yo'qligining sababi: qaysi biri (kamera / mikrofon) bloklangan
+  async function kamSabab(e){
+    const n = (e && e.name) || '';
+    if (/NotFound|Overconstrained|DevicesNotFound/.test(n)) return { tur: 'topilmadi' };
+    if (/NotReadable|TrackStart|Abort/.test(n)) return { tur: 'band' };
+    const bor = async (c) => { try { const s = await navigator.mediaDevices.getUserMedia(c); s.getTracks().forEach((t) => t.stop()); return true; } catch { return false; } };
+    // aniq — haqiqiy "ruxsat yo'q"; notanish xatoda yo'riqnoma ko'rsatiladi, lekin darsga kirish to'silmaydi
+    return { tur: 'ruxsat', aniq: /NotAllowed|Security|PermissionDenied/.test(n), mik: await bor({ audio: true }), kam: await bor({ video: true }) };
+  }
+  async function kamSina(){
+    const k = $('#kamKart'); if (!k) return;
+    kamStop();
+    if (!kamQollaydi()) return kamChiz('xato', { tur: 'yoq' });
+    k.classList.remove('tayyor', 'xato');
+    k.innerHTML = '<p style="margin:0">Ruxsat so‘ralmoqda… Oyna chiqsa, <b>“Ruxsat berish”</b> (Allow) ni bosing.</p>';
+    let s;
+    try {
+      s = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } } });
+    } catch (e) { return kamChiz('xato', await kamSabab(e)); }
+    if (!$('#kamKart')) { s.getTracks().forEach((t) => t.stop()); return; }
+    kamOqim = s;
+    k.innerHTML = `<span class="kam-belgi" style="background:var(--teal);color:#fff">✅ Ruxsat bor</span>
+      <div class="kam-oyna"><video id="kamVid" autoplay muted playsinline></video></div>
+      <div class="kam-mik"><span>🎤</span><div class="kam-chiziq"><i id="kamDaraja"></i></div></div>
+      <p>O‘zingizni ko‘ryapsizmi? Biror narsa deng — chiziq harakatlansa, mikrofon ishlayapti.</p>
+      <button class="cta" type="button" data-kam="tayyor">Hammasi ishlayapti 👍</button>`;
+    const v = $('#kamVid'); v.srcObject = s; v.play().catch(() => {});
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      kamAudio = new AC(); const an = kamAudio.createAnalyser(); an.fftSize = 256;
+      kamAudio.createMediaStreamSource(s).connect(an);
+      const b = new Uint8Array(an.frequencyBinCount);
+      const qadam = () => {
+        an.getByteTimeDomainData(b);
+        let m = 0; for (const x of b) m = Math.max(m, Math.abs(x - 128));
+        const d = $('#kamDaraja'); if (!d) return;
+        d.style.width = Math.min(100, m * 2.2) + '%';
+        kamRaf = requestAnimationFrame(qadam);
+      };
+      qadam();
+    } catch { /* daraja ko'rsatilmasa ham ruxsat bor */ }
+    // Kamera uzoq yonib turmasin — 40 soniyadan keyin o'zi yopiladi
+    kamT = setTimeout(kamTayyor, 40000);
+  }
+  function kamTayyor(){ kamStop(); kamOk = true; kamChiz('ok'); }
+  // Avval ruxsat berilgan bo'lsa — kamerani yoqmasdan bilib olamiz (brauzer qo'llasa)
+  async function kamDastlab(){
+    if (kamOk) return kamChiz('ok');
+    kamChiz('bosh');
+    try {
+      const q = (name) => navigator.permissions.query({ name }).then((r) => r.state);
+      const [kam, mik] = await Promise.all([q('camera'), q('microphone')]);
+      if (kam === 'granted' && mik === 'granted') { kamOk = true; kamChiz('ok'); }
+      else if (kam === 'denied' || mik === 'denied') kamChiz('xato', { tur: 'ruxsat', kam: kam !== 'denied', mik: mik !== 'denied' });
+    } catch { /* permissions API yo'q — tugma bilan tekshiriladi */ }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-kam]'); if (!b) return;
+    if (b.dataset.kam === 'sina') kamSina(); else kamTayyor();
+  });
+  // Sozlamadan qaytganda — o'zi qayta tekshiramiz
+  document.addEventListener('visibilitychange', () => {
+    const k = $('#kamKart');
+    if (!document.hidden && k && k.classList.contains('xato')) kamSina();
+    if (document.hidden && kamOqim) kamTayyor();
+  });
+
   // ---- bosqich ekranlari ----
-  const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc =(x) => String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   let holat = null, sanoqT = null, soroqT = null;
   function bosh(ism, kichik, sarlavha, matn){
     return `<div class="b-bosh">${ism ? `<div class="b-salom">Salom, ${esc(ism)} 👋</div>` : ''}<small>${esc(kichik)}</small><h2>${sarlavha}</h2>${matn ? `<p>${matn}</p>` : ''}</div>`;
@@ -900,6 +1064,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   function chiz(h){
     holat = h;
     clearInterval(sanoqT);
+    kamStop();
     const el = $('#bosqich');
     if (!h || h.bosqich === 'yangi') { el.hidden = true; document.body.classList.remove('bosqichda'); pk(); return; }
     document.body.classList.add('bosqichda'); el.hidden = false;
@@ -913,13 +1078,16 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
           <span class="b-vaqt"><span class="e">🗓️</span>${v.kun}, ${v.soat}</span>
           <p>Ustoz biriktirilishi bilan bildirishnoma keladi va shu sahifa o‘zi yangilanadi.</p>
         </div>
+        ${kamKart()}
         ${qollanma(h.startsAt)}
       </div>`;
+      kamDastlab();
     } else if (h.bosqich === 'belgilandi') {
       el.innerHTML = bosh(h.ism, 'Bepul sinov darsi', 'Ustozingiz tayyor! 🎉', `${v.kun}, soat ${v.soat} da · 45–60 daqiqa`) + `
       <div class="b-ichi">
         ${h.tasdiqlanmoqda ? '<div class="banner sariq"><span class="e">📞</span><span>Ustozingiz bir necha daqiqada qo‘ng‘iroq qilib, vaqtni tasdiqlaydi. Telefoningiz yoningizda bo‘lsin.</span></div>' : ''}
         <div class="b-kart">${ustozKart(h.ustoz || {})}</div>
+        ${kamKart()}
         <div class="b-kart">
           <h3>Darsgacha qoldi</h3>
           <div class="sanoq" id="sanoq"></div>
@@ -935,11 +1103,12 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
             <li><i>🎧</i>Quloqchin — ovoz toza eshitiladi</li>
             <li><i>📶</i>Barqaror internet (Wi-Fi yaxshi)</li>
             <li><i>🤫</i>Tinch joy — 45–60 daqiqa faqat siz va ustoz</li>
-            <li><i>🎤</i>Mikrofon so‘ralsa — “Ruxsat berish”</li>
+            <li><i>🎤</i>Kamera va mikrofonga ruxsat — yuqorida tekshiring</li>
           </ul>
           <p class="yol-eslat" style="margin-top:12px!important"><span class="e">🔔</span>${eslatmaMatni(new Date(h.startsAt).getTime())}</p>
         </div>
       </div>`;
+      kamDastlab();
       const b = $('#kirishBtn');
       b.onclick = kirish;
       const start = new Date(h.startsAt).getTime();
@@ -1219,6 +1388,22 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   async function kirish(){
     const b = $('#kirishBtn'); if (!b || !b.classList.contains('ochiq')) return;
     $('#kirishXato').textContent = ''; b.disabled = true; b.textContent = 'Ochilmoqda…';
+    // Ruxsatsiz kirsa, darsda ovoz bo'lmaydi — avval sozlamada ruxsat berdiramiz
+    if (!kamOk && kamQollaydi()) {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        s.getTracks().forEach((t) => t.stop()); kamOk = true; kamChiz('ok');
+      } catch (e) {
+        const sabab = await kamSabab(e);
+        if (sabab.tur === 'ruxsat' && sabab.aniq) {
+          kamChiz('xato', sabab);
+          $('#kamKart')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          $('#kirishXato').textContent = 'Avval kamera va mikrofonga ruxsat bering — yo‘riqnoma yuqorida';
+          b.disabled = false; b.textContent = '▶ Darsga kirish';
+          return;
+        }
+      }
+    }
     try {
       const r = await fetch(KAPI + '/course-page/enter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: KALIT }) });
       const d = await r.json().catch(() => ({}));
