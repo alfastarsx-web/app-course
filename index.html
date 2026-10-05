@@ -925,15 +925,15 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   }
   const IPHONE_QADAM = `<ol class="kam-qadam">
       <li>Telefonda <b>Sozlamalar</b> (⚙️ Settings) ni oching.</li>
-      <li>Pastga tushib, <b>MyTeacher</b> ilovasini toping.</li>
+      <li>Pastga tushib, <b>AI Teacher</b> ilovasini toping.</li>
       <li><b>Kamera</b> va <b>Mikrofon</b> tugmalarini yoqing (yashil bo‘lsin).</li>
-      <li>MyTeacher'ga qaytib, <b>“Qayta tekshirish”</b> ni bosing. Ilova qayta ochilsa, bu normal holat.</li>
+      <li>Ilovaga qaytib, <b>“Qayta tekshirish”</b> ni bosing. Ilova qayta ochilsa, bu normal holat.</li>
     </ol>`;
   const ANDROID_QADAM = `<ol class="kam-qadam">
-      <li>Telefonda <b>Sozlamalar</b> → <b>Ilovalar</b> → <b>MyTeacher</b> ni oching. (Yoki ilova belgisini bosib turing → ⓘ <b>“Ilova haqida”</b>.)</li>
+      <li>Telefonda <b>Sozlamalar</b> → <b>Ilovalar</b> → <b>My AI Teacher</b> ni oching. (Yoki ilova belgisini bosib turing → ⓘ <b>“Ilova haqida”</b>.)</li>
       <li><b>Ruxsatlar</b> bo‘limiga kiring.</li>
       <li><b>Kamera</b> va <b>Mikrofon</b> → <b>“Ilovadan foydalanishda ruxsat berish”</b> ni tanlang.</li>
-      <li>MyTeacher'ga qaytib, <b>“Qayta tekshirish”</b> ni bosing.</li>
+      <li>Ilovaga qaytib, <b>“Qayta tekshirish”</b> ni bosing.</li>
     </ol>`;
   const BRAUZER_QADAM = `<ol class="kam-qadam">
       <li><b>iPhone (Safari):</b> manzil satridagi <b>aA</b> → <b>Veb-sayt sozlamalari</b> → Kamera va Mikrofon → <b>Ruxsat berish</b>.</li>
@@ -983,7 +983,8 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     if (/NotFound|Overconstrained|DevicesNotFound/.test(n)) return { tur: 'topilmadi' };
     if (/NotReadable|TrackStart|Abort/.test(n)) return { tur: 'band' };
     const bor = async (c) => { try { const s = await navigator.mediaDevices.getUserMedia(c); s.getTracks().forEach((t) => t.stop()); return true; } catch { return false; } };
-    return { tur: 'ruxsat', mik: await bor({ audio: true }), kam: await bor({ video: true }) };
+    // aniq — haqiqiy "ruxsat yo'q"; notanish xatoda yo'riqnoma ko'rsatiladi, lekin darsga kirish to'silmaydi
+    return { tur: 'ruxsat', aniq: /NotAllowed|Security|PermissionDenied/.test(n), mik: await bor({ audio: true }), kam: await bor({ video: true }) };
   }
   async function kamSina(){
     const k = $('#kamKart'); if (!k) return;
@@ -1394,7 +1395,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         s.getTracks().forEach((t) => t.stop()); kamOk = true; kamChiz('ok');
       } catch (e) {
         const sabab = await kamSabab(e);
-        if (sabab.tur === 'ruxsat') {
+        if (sabab.tur === 'ruxsat' && sabab.aniq) {
           kamChiz('xato', sabab);
           $('#kamKart')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           $('#kirishXato').textContent = 'Avval kamera va mikrofonga ruxsat bering — yo‘riqnoma yuqorida';
