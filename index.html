@@ -431,6 +431,23 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
 .d-k.bosiladi{cursor:pointer}
 .d-k.bosiladi::after{content:"↻";position:absolute;top:7px;right:9px;font-size:13px;font-weight:800;color:var(--teal)}
 .d-k .kch{font-size:10.5px;color:#0f766e;font-weight:700}
+.d-k.daftarli{cursor:pointer}
+.d-k.daftarli::after{content:"📒";position:absolute;top:6px;right:8px;font-size:13px}
+/* Dars daftari: ustoz darsda yozgan eslatmalar, yangi so'zlar, uyga vazifa */
+.daftar-q{text-align:left;display:grid;gap:12px}
+.daftar-q section{background:#f7f5f0;border-radius:16px;padding:12px 14px}
+.daftar-q h4{margin:0 0 6px;font-size:14px;font-weight:800}
+.daftar-q .matn{white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.55;color:var(--ink,#0a1628)}
+.daftar-q .soz{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #e9e4d8;font-size:15px}
+.daftar-q .soz:last-child{border-bottom:0}
+.daftar-q .soz b{min-width:42%}
+.daftar-q .soz span{color:var(--mut)}
+.daftar-q .vazifa{background:var(--sun-soft)}
+.daftar-btn{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.daftar-btn .e{font-size:26px}
+.daftar-btn b{display:block;font-size:16px}
+.daftar-btn small{color:var(--mut);font-size:13px}
+.daftar-btn .o{margin-left:auto;font-size:20px;color:var(--teal);font-weight:800}
 .d-izoh{color:var(--mut);font-size:13px;margin:12px 0 0}
 .ruxsat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .ruxsat div{border-radius:16px;background:#f7f5f0;padding:12px 8px;text-align:center}
@@ -666,6 +683,15 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     <p class="xato" id="kochXato" role="alert"></p>
     <button class="cta" type="button" id="kochTasdiq" disabled style="width:100%">Yangi vaqtni tanlang</button>
     <button class="qongiroq" type="button" id="kochYop">Yopish</button>
+  </div>
+</div>
+<div class="oyna" id="daftarOyna" hidden>
+  <div class="ichi vaqt-ichi" role="dialog" aria-modal="true" aria-labelledby="daftarS">
+    <h3 id="daftarS">📒 Dars daftari</h3>
+    <p class="vaqt-izoh" id="daftarIzoh"></p>
+    <div id="daftarTana"></div>
+    <p class="xato" id="daftarXato" role="alert"></p>
+    <button class="qongiroq" type="button" id="daftarYop">Yopish</button>
   </div>
 </div>
 <section class="bosqich" id="bosqich" hidden aria-live="polite"></section>
@@ -1179,6 +1205,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       el.innerHTML = bosh(h.ism, 'Sinov darsi o‘tdi', 'Birinchi qadam tashlandi! 🎉', `${ustozIsm} bilan birinchi darsingiz yakunlandi.`) + `
       <div class="b-ichi">
         <div class="b-kart" id="bahoKart">${h.baho ? bahoRahmat(h.baho) : bahoForma(ustozIsm)}</div>
+        ${daftarBor(h.daftar) ? `<div class="b-kart"><h3>📒 ${ustozIsm}ning dars eslatmalari</h3>${daftarHtml(h.daftar)}</div>` : ''}
         <div class="b-kart">
           ${ustozKart(u)}
           <h3 style="margin-top:16px">${ustozIsm} bilan davom etish</h3>
@@ -1235,6 +1262,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       const kb = $('#kirishBtn'); if (kb) kb.onclick = kirish;
       if (h.bahosiz) bahoUlash(h.bahosiz.bookingId);
       document.querySelectorAll('[data-koch]').forEach((b) => { b.onclick = () => kochOch(b.dataset.koch); });
+      document.querySelectorAll('[data-daftar]').forEach((b) => { b.onclick = () => daftarOch(b.dataset.daftar); });
     }
     pk();
   }
@@ -1248,17 +1276,20 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       const raqam = d.holat === 'kechirildi' ? '—' : ++n;
       const vaqt = d.holat === 'otildi' && d.boshlandi ? vaqtYoz(d.boshlandi).soat : vaqtYoz(d.startsAt).soat;
       const ich = `<span class="n">${raqam}</span><span class="k">${kunQisqa(d.startsAt)}</span><span class="s">${vaqt}</span>${d.kochirilgan && d.holat === 'kutilmoqda' ? '<span class="kch">↻ ko‘chirildi</span>' : ''}<span class="h">${HOLAT_YORLIQ[d.holat] || ''}</span>`;
-      return d.kochirsaBoladi
-        ? `<button class="d-k ${d.holat} bosiladi" type="button" data-koch="${esc(d.id)}" aria-label="${kunQisqa(d.startsAt)} ${vaqt} — ko‘chirish">${ich}</button>`
-        : `<div class="d-k ${d.holat}">${ich}</div>`;
+      if (d.kochirsaBoladi) return `<button class="d-k ${d.holat} bosiladi" type="button" data-koch="${esc(d.id)}" aria-label="${kunQisqa(d.startsAt)} ${vaqt} — ko‘chirish">${ich}</button>`;
+      if (d.daftar) return `<button class="d-k ${d.holat} daftarli" type="button" data-daftar="${esc(d.id)}" aria-label="${kunQisqa(d.startsAt)} — dars daftari">${ich}</button>`;
+      return `<div class="d-k ${d.holat}">${ich}</div>`;
     }).join('');
+    const daftarli = jd.darslar.filter((d) => d.daftar);
+    const oxirgi = daftarli[daftarli.length - 1];
     return `<div class="b-kart">
       <h3>Darslarim</h3>
       <div class="d-progress"><span><b>${jd.otildi}</b> / ${jd.jami} dars o‘tildi${jd.kelmadi ? ` · ${jd.kelmadi} ta kelmadingiz` : ''}</span><span>${foiz}%</span></div>
       <div class="d-chiziq"><i style="width:${foiz}%"></i></div>
       <div class="d-grid">${kataklar}</div>
-      <p class="d-izoh">Kela olmaysizmi? <b>↻</b> belgili darsni bosib, boshqa vaqtga ko‘chiring.</p>
-    </div>`;
+      <p class="d-izoh">Kela olmaysizmi? <b>↻</b> belgili darsni bosib, boshqa vaqtga ko‘chiring.${oxirgi ? ' <b>📒</b> — ustoz eslatmalari.' : ''}</p>
+    </div>${oxirgi ? `
+    <div class="b-kart"><button class="daftar-btn" type="button" data-daftar="${esc(oxirgi.id)}"><span class="e">📒</span><span><b>Oxirgi dars daftari</b><small>${kunQisqa(oxirgi.startsAt)} · ustoz eslatmalari, yangi so‘zlar, uyga vazifa</small></span><span class="o">›</span></button></div>` : ''}`;
   }
   function ruxsatKart(jd){
     const r = jd.ruxsat;
@@ -1285,6 +1316,40 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       </ul>
     </details>`;
   }
+
+  // ---- Dars daftari: ustoz darsda yozgan eslatmalar (videoxonadagi daftar) ----
+  const daftarBor = (n) => !!n && ['matn', 'sozlar', 'vazifa'].some((k) => String(n[k] || '').trim());
+  function daftarHtml(n){
+    const matn = String(n.matn || '').trim(), sozlar = String(n.sozlar || '').trim(), vazifa = String(n.vazifa || '').trim();
+    const sozQator = sozlar.split('\n').filter((q) => q.trim()).map((q) => {
+      const [soz, ...qolgan] = q.split(/\s[—–-]\s|\s*[—–=:]\s*/);
+      return `<div class="soz"><b>${esc(soz.trim())}</b><span>${esc(qolgan.join(' — ').trim())}</span></div>`;
+    }).join('');
+    return `<div class="daftar-q">
+      ${matn ? `<section><h4>📝 Eslatmalar</h4><div class="matn">${esc(matn)}</div></section>` : ''}
+      ${sozQator ? `<section><h4>📚 Yangi so‘zlar</h4>${sozQator}</section>` : ''}
+      ${vazifa ? `<section class="vazifa"><h4>🏠 Uyga vazifa</h4><div class="matn">${esc(vazifa)}</div></section>` : ''}
+    </div>`;
+  }
+  async function daftarOch(id){
+    $('#daftarXato').textContent = ''; $('#daftarTana').innerHTML = '';
+    $('#daftarIzoh').textContent = 'Yuklanmoqda…';
+    $('#daftarOyna').hidden = false; pk();
+    try {
+      const r = await fetch(`${KAPI}/course-page/daftar?t=${encodeURIComponent(KALIT)}&bookingId=${encodeURIComponent(id)}`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || 'Ma’lumot olinmadi');
+      const x = vaqtYoz(d.startsAt);
+      $('#daftarIzoh').textContent = `${x.kun}, ${x.soat}${d.ustoz ? ` · ${d.ustoz}` : ''}`;
+      $('#daftarTana').innerHTML = daftarBor(d.daftar) ? daftarHtml(d.daftar) : '<p class="vaqt-izoh">Bu darsda eslatma yozilmagan.</p>';
+    } catch (e) {
+      $('#daftarIzoh').textContent = '';
+      $('#daftarXato').textContent = e.message || 'Xatolik, qayta urinib ko‘ring';
+    }
+  }
+  const daftarYop = () => { $('#daftarOyna').hidden = true; pk(); };
+  $('#daftarYop').onclick = daftarYop;
+  $('#daftarOyna').addEventListener('click', (e) => { if (e.target.id === 'daftarOyna') daftarYop(); });
 
   // Ko'chirish oynasi
   let koch = null; // { id, data, kunlar, tanKun, tan, kupon }
@@ -1618,7 +1683,8 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       const kalitH = (x) => x ? [x.bosqich, x.startsAt || '', x.kirishOchiq ? 1 : 0, x.baho ? 1 : 0, x.tasdiqlanmoqda ? 1 : 0,
         x.tolovRad || '', (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : '',
         x.taklif ? `${x.taklif.id}:${x.taklif.holat}:${x.taklif.expiresAt || ''}` : '', x.bahosiz ? x.bahosiz.bookingId : '',
-        x.jadval ? JSON.stringify([x.jadval.darslar.map((d) => [d.startsAt, d.holat, d.kochirsaBoladi]), x.jadval.ruxsat]) : ''].join('|') : '';
+        x.jadval ? JSON.stringify([x.jadval.darslar.map((d) => [d.startsAt, d.holat, d.kochirsaBoladi, d.daftar ? 1 : 0]), x.jadval.ruxsat]) : '',
+        x.daftar ? JSON.stringify(x.daftar) : ''].join('|') : '';
       if (kalitH(h) !== kalitH(holat)) chiz(h);
     } catch (e) { /* tarmoq xatosi — keyingi safar */ }
   }
