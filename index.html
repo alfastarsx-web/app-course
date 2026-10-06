@@ -714,6 +714,30 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
 <canvas id="konfetti" hidden></canvas>
 
 <script>
+// Ilovaning Kurslar tab'i sahifani ?uid=<o'quvchi id> bilan ochadi (kalitsiz). Kalitni serverdan olib,
+// sahifani ?t=<kalit> bilan qayta ochamiz — aks holda o'quvchi o'z darslari o'rniga landingni ko'radi.
+// Har ochilishda yangisi olinadi: bitta telefonda boshqa akkaunt kirsa, eskisining kaliti ishlatilmaydi.
+(function () {
+  var q = new URLSearchParams(location.search);
+  var uid = q.get('uid') || '';
+  if (q.get('t') || !/^[0-9a-f-]{36}$/i.test(uid)) return;
+  try { sessionStorage.removeItem('kurs_t'); } catch (e) { /* yo'q */ }
+  var api = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8077/api' : 'https://ai.myteacher.uz/api';
+  document.documentElement.style.visibility = 'hidden';
+  var ochiq = function () { document.documentElement.style.visibility = ''; };
+  setTimeout(ochiq, 6000); // server javob bermasa ham sahifa ko'rinsin
+  fetch(api + '/course-page/ilova-kalit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uid: uid }) })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !d.token) return ochiq();
+      q.delete('uid');
+      q.set('t', d.token);
+      location.replace(location.pathname + '?' + q.toString() + location.hash);
+    })
+    .catch(ochiq);
+})();
+</script>
+<script>
 (function(){
   document.documentElement.classList.add('js');
   const $ = (s) => document.querySelector(s);
