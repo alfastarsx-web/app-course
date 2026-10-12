@@ -18,6 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<script>
+// Kirish sahifasi: app-course.myteacher.uz/login (server noma'lum yo'lni shu faylga beradi)
+if (/^\/login\/?$/.test(location.pathname)) location.replace('/login.html' + location.search);
+</script>
 <style>
 :root{
   --navy:#0A1628; --navy-2:#13233d; --teal:#0D9488; --teal-2:#14b8a6; --teal-soft:#e6f6f4;
@@ -497,7 +501,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
           <li>45–60 daqiqalik to‘liq dars</li>
           <li>Karta shart emas</li>
           <li>Hech qanday majburiyat yo‘q</li>
-          <li>Ilova ichida video dars</li>
+          <li>Brauzerda video dars — ilova shart emas</li>
         </ul>
       </div>
       <div class="sahna" aria-hidden="true">
@@ -717,6 +721,16 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
 // Ilovaning Kurslar tab'i sahifani ?uid=<o'quvchi id> bilan ochadi (kalitsiz). Kalitni serverdan olib,
 // sahifani ?t=<kalit> bilan qayta ochamiz — aks holda o'quvchi o'z darslari o'rniga landingni ko'radi.
 // Har ochilishda yangisi olinadi: bitta telefonda boshqa akkaunt kirsa, eskisining kaliti ishlatilmaydi.
+// Saytga telefon+parol bilan kirgan o'quvchi (/login): keyingi safar kalit shu brauzerdan olinadi (30 kun)
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (q.get('t') || q.get('uid') || q.get('click')) return;
+  var t = '';
+  try { t = localStorage.getItem('kurs_kirish') || ''; } catch (e) { /* yo'q */ }
+  if (!t) return;
+  q.set('t', t);
+  location.replace(location.pathname + '?' + q.toString() + location.hash);
+})();
 (function () {
   var q = new URLSearchParams(location.search);
   var uid = q.get('uid') || '';
@@ -772,9 +786,9 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     const tartib = ios ? [tugma(IOS_URL, 'App Store', 'iPhone uchun'), tugma(ANDROID_URL, 'Google Play', 'Android uchun')]
                        : [tugma(ANDROID_URL, 'Google Play', 'Android uchun'), tugma(IOS_URL, 'App Store', 'iPhone uchun')];
     return `<div class="ilova-blok">
-      <b>Darsingiz MyTeacher ilovasida bo‘ladi — hozir yuklab oling</b>
+      <b>Darsga sayt orqali kirasiz — ilova shart emas</b>
       <div class="dokonlar">${tartib.join('')}</div>
-      <p>Login va parol <b>Telegram botimizga</b> keladi: Telegramda <b>@MT_yordam_bot</b> ni oching va <b>“Raqamni yuborish”</b> ni bosing. Darsingiz o‘sha yerda kutib turadi.</p>
+      <p>Login va parol <b>Telegram botimizga</b> keladi: Telegramda <b>@MT_yordam_bot</b> ni oching va <b>“Raqamni yuborish”</b> ni bosing. Keyin <b>app-course.myteacher.uz/login</b> da kiring yoki botdagi <b>«▶️ Darsga kirish»</b> tugmasini bosing. Ilova esa ixtiyoriy (yuqoridagi tugmalar).</p>
     </div>`;
   }
   const ilova = () => !!(window.flutter_inappwebview && window.flutter_inappwebview.callHandler) && !/app-course\./.test(location.hostname);
@@ -1183,8 +1197,15 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   // ---- bosqich ekranlari ----
   const esc =(x) => String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   let holat = null, sanoqT = null, soroqT = null;
+  // Saytdan (/login) kirgan bo'lsa — "Chiqish" (bitta telefonda bir nechta o'quvchi bo'lishi mumkin)
+  const saytdan = () => { try { return !!localStorage.getItem('kurs_kirish'); } catch (e) { return false; } };
+  window.kursChiqish = () => {
+    try { localStorage.removeItem('kurs_kirish'); sessionStorage.removeItem('kurs_t'); } catch (e) { /* yo'q */ }
+    location.replace('/login.html');
+  };
   function bosh(ism, kichik, sarlavha, matn){
-    return `<div class="b-bosh">${ism ? `<div class="b-salom">Salom, ${esc(ism)} 👋</div>` : ''}<small>${esc(kichik)}</small><h2>${sarlavha}</h2>${matn ? `<p>${matn}</p>` : ''}</div>`;
+    const chiq = saytdan() ? '<button type="button" onclick="kursChiqish()" style="float:right;border:0;background:none;color:inherit;opacity:.7;font:inherit;font-size:13px;font-weight:700;cursor:pointer">Chiqish ↩</button>' : '';
+    return `<div class="b-bosh">${chiq}${ism ? `<div class="b-salom">Salom, ${esc(ism)} 👋</div>` : ''}<small>${esc(kichik)}</small><h2>${sarlavha}</h2>${matn ? `<p>${matn}</p>` : ''}</div>`;
   }
   // API rasm yo'lini (uploads/ ichida) qaytaradi — kichik nusxasi /thumb orqali olinadi
   function rasmUrl(yol){
@@ -1291,7 +1312,14 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       <div class="b-ichi"><div class="b-kart markaz"><p style="margin:0 0 14px">Bepul sinov darsi hali ham siz uchun ochiq.</p><button class="cta" type="button" id="qaytaTanla" style="width:100%">Yangi vaqt tanlash</button></div></div>`;
       $('#qaytaTanla').onclick = vaqtOch;
     } else if (h.bosqich === 'eskirgan') {
-      el.innerHTML = bosh('', 'Kurslar', 'Sahifani yangilang', 'Kurslar bo‘limini yopib, qayta oching — hammasi joyida bo‘ladi.');
+      if (saytdan()) {
+        // Saytdagi kirish muddati tugadi — qaytadan telefon + parol bilan
+        try { localStorage.removeItem('kurs_kirish'); sessionStorage.removeItem('kurs_t'); } catch (e) { /* yo'q */ }
+        el.innerHTML = bosh('', 'Kurslar', 'Qaytadan kiring', 'Kirish muddati tugadi. Telefon raqam va parolingiz bilan qayta kiring.') + `
+        <div class="b-ichi"><div class="b-kart markaz"><a class="cta" href="/login.html" style="width:100%">👤 Kirish</a></div></div>`;
+      } else {
+        el.innerHTML = bosh('', 'Kurslar', 'Sahifani yangilang', 'Kurslar bo‘limini yopib, qayta oching — hammasi joyida bo‘ladi.');
+      }
     } else if (h.bosqich === 'oqiyapti') {
       const darslar = h.darslar || [];
       const ob = h.obuna;
