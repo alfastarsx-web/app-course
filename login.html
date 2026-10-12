@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Kirish — MyTeacher</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/img/bepul/favicon.svg">
+<meta name="theme-color" content="#0A1628">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700&family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+:root{--navy:#0A1628;--teal:#0D9488;--teal-2:#14b8a6;--mut:#5b6474;--line:#d6dde6}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:Manrope,system-ui,sans-serif;color:var(--navy);min-height:100vh;display:grid;place-items:center;padding:20px 16px;
+  background:radial-gradient(90% 60% at 80% 10%,#16435a 0%,rgba(22,67,90,0) 60%),radial-gradient(70% 60% at 0% 100%,#0f3b3a 0%,rgba(15,59,58,0) 60%),var(--navy)}
+.kart{background:#fff;border-radius:22px;padding:26px 22px 22px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.logo{display:block;height:28px;width:auto;margin:0 auto 18px}
+h1{font-family:Unbounded,sans-serif;font-size:22px;margin:0 0 6px;text-align:center}
+.izoh{margin:0 0 18px;color:var(--mut);font-size:14.5px;line-height:1.45;text-align:center}
+label{display:block;font-size:13px;font-weight:800;margin:14px 0 6px}
+.maydon{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+.maydon:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.15)}
+.maydon span{padding:0 10px 0 14px;color:var(--mut);font-weight:800;font-size:17px}
+.maydon input{flex:1;border:0;outline:0;font:inherit;font-size:18px;font-weight:700;padding:14px 14px 14px 0;min-width:0;background:transparent;color:var(--navy)}
+.maydon.parol input{padding-left:14px;letter-spacing:3px}
+.xato{color:#be123c;font-size:14px;font-weight:700;min-height:20px;margin:12px 0 0}
+button{width:100%;border:0;border-radius:14px;padding:15px;font:inherit;font-size:16px;font-weight:800;cursor:pointer;margin-top:10px;
+  background:linear-gradient(135deg,var(--teal),var(--teal-2));color:#fff;box-shadow:0 10px 24px rgba(13,148,136,.3)}
+button:disabled{opacity:.7;cursor:default}
+.yordam{font-size:13.5px;color:var(--mut);margin-top:18px;line-height:1.55;text-align:center}
+.yordam a{color:var(--teal);font-weight:800;text-decoration:none}
+</style>
+</head>
+<body>
+<form class="kart" id="forma" autocomplete="on" novalidate>
+  <img class="logo" src="/img/bepul/logo.png" alt="MyTeacher" width="800" height="240" style="filter:invert(1) hue-rotate(180deg)">
+  <h1>Kirish</h1>
+  <p class="izoh">Telegramdagi <b>@MT_yordam_bot</b> yuborgan telefon raqam va parolni kiriting</p>
+  <label for="tel">Telefon raqam</label>
+  <div class="maydon"><span>+998</span><input id="tel" type="tel" inputmode="numeric" autocomplete="username" placeholder="90 123 45 67" maxlength="12" autofocus></div>
+  <label for="parol">Parol</label>
+  <div class="maydon parol"><input id="parol" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••"></div>
+  <div class="xato" id="xato" role="alert"></div>
+  <button type="submit" id="yubor">Kirish</button>
+  <div class="yordam">Login-parol yo‘qmi yoki unutdingizmi?<br>Telegramda <a href="https://t.me/MT_yordam_bot" target="_blank" rel="noopener">@MT_yordam_bot</a> ni oching — «Raqamni yuborish» yoki «🔑 Parolni tiklash»</div>
+</form>
+<script>
+(function () {
+  // Kirgan o'quvchi — darslar sahifasiga (index.html ?t=<sahifa kaliti>)
+  var KAPI = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8077/api' : 'https://ai.myteacher.uz/api';
+  var ichkari = function (t) { location.replace('/?t=' + encodeURIComponent(t)); };
+  try { var bor = localStorage.getItem('kurs_kirish'); if (bor) return ichkari(bor); } catch (e) { /* yo'q */ }
+
+  var $ = function (s) { return document.querySelector(s); };
+  $('#tel').addEventListener('input', function (e) {
+    var r = e.target.value.replace(/\D/g, '').replace(/^998/, '').slice(0, 9);
+    e.target.value = [r.slice(0, 2), r.slice(2, 5), r.slice(5, 7), r.slice(7, 9)].filter(Boolean).join(' ');
+  });
+  $('#forma').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var tel = $('#tel').value.replace(/\D/g, '');
+    var parol = $('#parol').value.trim();
+    var xato = $('#xato');
+    if (tel.length !== 9) { xato.textContent = 'Telefon raqamni to‘liq kiriting (9 ta raqam)'; return; }
+    if (!parol) { xato.textContent = 'Parolni kiriting'; return; }
+    var b = $('#yubor'); b.disabled = true; b.textContent = 'Kirilmoqda…'; xato.textContent = '';
+    fetch(KAPI + '/course-page/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: '998' + tel, password: parol }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
+      .then(function (x) {
+        if (!x.r.ok || !x.d.token) {
+          throw new Error(x.r.status === 429 ? 'Urinishlar ko‘p — 1 daqiqadan keyin qayta urinib ko‘ring' : (x.d.message || 'Telefon raqam yoki parol noto‘g‘ri'));
+        }
+        try { localStorage.setItem('kurs_kirish', x.d.token); } catch (e2) { /* saqlanmasa ham shu safar kiradi */ }
+        ichkari(x.d.token);
+      })
+      .catch(function (err) {
+        xato.textContent = (err && err.message && !/fetch/i.test(err.message)) ? err.message : 'Internet bilan muammo — qayta urinib ko‘ring';
+        b.disabled = false; b.textContent = 'Kirish';
+      });
+  });
+})();
+</script>
+</body>
+</html>
