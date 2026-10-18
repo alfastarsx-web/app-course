@@ -360,6 +360,10 @@ body.bosqichda .hero,body.bosqichda main,body.bosqichda footer,body.bosqichda .p
 .tarif.top{background:var(--sun-soft);border-color:#f3d67a}
 button.tarif{font:inherit;color:inherit;background:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent}
 button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 0 2px var(--teal) inset}
+.yoriq{margin-top:12px;border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;background:#fff}
+.yoriq summary{cursor:pointer;font-weight:800;font-size:14.5px;color:var(--navy)}
+.yoriq ol{margin:10px 0 0;padding-left:22px;display:grid;gap:8px;font-size:14.5px;line-height:1.45;color:var(--ink,#1f2937)}
+.yoriq p{margin:10px 0 0;font-size:13.5px;color:var(--mut)}
 .banner{border-radius:18px;padding:14px 16px;font-weight:700;font-size:15px;display:flex;gap:10px;align-items:flex-start}
 .banner.sariq{background:var(--sun-soft);color:#6b4e00}
 .banner.qizil{background:#fde8e6;color:#9a3b33}
@@ -1572,6 +1576,18 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       <div class="kq-raqam"><b>${esc(k.raqam)}</b><button type="button" data-nusxa="${esc(String(k.raqam).replace(/\s/g, ''))}">Nusxa</button></div>
       ${k.egasi ? `<small style="margin-top:8px">Egasi: ${esc(k.egasi)}</small>` : ''}</div>`;
   }
+  // Kartaga o'tkazish — qadam-baqadam (ko'p o'quvchi birinchi marta kartaga o'tkazadi)
+  function tolovYoriqnoma(k){
+    return `<details class="yoriq"><summary>📖 Kartaga qanday o‘tkazaman? Batafsil</summary><ol>
+      <li>Yuqoridagi <b>“Nusxa”</b> tugmasi bilan karta raqamini nusxalang.</li>
+      <li><b>Click, Payme, Uzum</b> yoki bank ilovangizni oching → <b>“O‘tkazmalar” → “Kartaga”</b>.</li>
+      <li>Karta raqamini qo‘ying${k && k.egasi ? ` — egasi <b>${esc(k.egasi)}</b> chiqqanini tekshiring` : ''}.</li>
+      <li>Summani yozing va o‘tkazmani tasdiqlang (SMS kod).</li>
+      <li>Ekranda chiqqan <b>chek</b>ni (kvitansiya) skrinshot qiling.</li>
+      <li>Shu sahifaga qayting → <b>“📎 Chek skrinshotini tanlang”</b> → rasmni tanlang → <b>“To‘ladim”</b>.</li>
+      <li>Pul tushgani tekshirilgach, bildirishnoma keladi va darslaringiz shu yerda chiqadi.</li>
+    </ol><p>Qiyin bo‘lsa yoki savol bo‘lsa — <a href="https://t.me/MT_yordam_bot" target="_blank" rel="noopener">@MT_yordam_bot</a> ga yozing, yordam beramiz.</p></details>`;
+  }
   function kartaNusxa(){
     document.querySelectorAll('[data-nusxa]').forEach((b) => {
       b.onclick = async () => {
@@ -1590,7 +1606,8 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       return `${bt ? `<div class="banner sariq" style="margin-bottom:12px"><span class="e">🔖</span><span>Ustozingiz ajratgan vaqtlar bo‘shadi. To‘lagan <b>${somY(bt.summa)}</b>ingiz <b>${vaqtYoz(bt.gacha).kun.toLowerCase()}</b> gacha saqlanadi — yangi taklif kelsa, kurs narxidan ayiriladi.</span></div>`
         : o ? '<div class="banner qizil" style="margin-bottom:12px"><span class="e">⏳</span><span>Oldingi taklif muddati tugadi — soatlar bo‘shadi.</span></div>' : ''}
         <p class="b-izoh">Darsni davom ettirmoqchi bo‘lsangiz — tugmani bosing. ${ustozIsm} siz bilan kunlar va soatlarni kelishib, taklif yuboradi.</p>
-        <button class="cta" type="button" id="davomBtn" style="width:100%">Davom etmoqchiman</button><p class="b-xato" id="davomXato"></p>`;
+        <button class="cta" type="button" id="davomBtn" style="width:100%">Davom etmoqchiman</button><p class="b-xato" id="davomXato"></p>
+        <ol class="qadamlar"><li><b>“Davom etmoqchiman”</b> ni bosing</li><li>${ustozIsm} qo‘ng‘iroq qilib kun va soatlarni kelishadi va shu yerga <b>taklif</b> yuboradi (Telegramga ham keladi)</li><li>Taklifdagi summani <b>karta raqamiga</b> o‘tkazib, chek skrinshotini shu yerga yuklaysiz — darslar jadvalingizga tushadi</li></ol>`;
     }
     if (o.holat === 'requested') {
       return `<div class="banner sariq"><span class="e">📞</span><span>${ustozIsm} sizga taklif tayyorlayapti — kunlar va soatlarni kelishish uchun qo‘ng‘iroq qiladi.</span></div>`;
@@ -1628,6 +1645,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       <details class="karta-yol" id="kartaYol" style="margin-top:12px"><summary>Yoki karta raqamiga o‘tkazib, chek yuklang</summary><div class="pay-ichi">` : ''}
       ${h.karta ? kartaQuti(h.karta) : '<p class="b-izoh" style="margin:12px 0 0">Karta raqamini operator yuboradi.</p>'}
       <ol class="qadamlar"><li>Shu kartaga <b id="otkazSumma" data-toliq="${toliq}">${somY(toliq)}</b> o‘tkazing (Click, Payme yoki bank ilovasida)</li><li>To‘lov chekining skrinshotini yuklang va “To‘ladim” ni bosing</li></ol>
+      ${tolovYoriqnoma(h.karta)}
       <label class="chek" id="chekLabel"><input type="file" id="chekFayl" accept="image/*,application/pdf"><span id="chekMatn">📎 Chek skrinshotini tanlang</span></label>
       <button class="cta" type="button" id="toladim" style="width:100%;margin-top:12px" disabled>To‘ladim</button>
       <p class="b-xato" id="tolovXato"></p>
