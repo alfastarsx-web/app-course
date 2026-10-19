@@ -1357,6 +1357,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       el.innerHTML = bosh(h.ism, 'Kurslarim', 'Darslaringiz davom etmoqda 💪', jd && jd.haftalik ? `🗓️ ${esc(jd.haftalik)}${ob ? ` · obuna ${vaqtYoz(ob.tugash).kun.toLowerCase()} gacha` : ''}` : ob ? `${ob.haftada ? `Haftada ${ob.haftada} marta · ` : ''}obuna ${vaqtYoz(ob.tugash).kun.toLowerCase()} gacha` : 'Ustozingiz bilan o‘qishni davom ettiryapsiz.') + `
       <div class="b-ichi">
         <div id="kochNatija"></div>
+        ${uzaytirishKart(h)}
         ${h.ustoz ? `<div class="b-kart">${ustozKart(h.ustoz)}</div>` : ''}
         ${bahosizKart(h)}
         ${darslar.length ? `
@@ -1375,6 +1376,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         </div>`}
       </div>`;
       const kb = $('#kirishBtn'); if (kb) kb.onclick = kirish;
+      if (h.taklif && h.taklif.holat === 'sent') taklifUlash(h);
       if (h.bahosiz) bahoUlash(h.bahosiz.bookingId);
       document.querySelectorAll('[data-koch]').forEach((b) => { b.onclick = () => kochOch(b.dataset.koch); });
       document.querySelectorAll('[data-daftar]').forEach((b) => { b.onclick = () => daftarOch(b.dataset.daftar); });
@@ -1703,6 +1705,18 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       <button class="cta" type="button" id="toladim" style="width:100%;margin-top:12px" disabled>To‘ladim</button>
       <p class="b-xato" id="tolovXato"></p>
       ${h.click ? '</div></details>' : ''}`;
+  }
+  // Obuna tugayapti — uzaytirish taklifi (tizim o'zi yuboradi): hozirgi kunlar, narx, karta + chek yoki Click
+  function uzaytirishKart(h){
+    const o = h.taklif;
+    if (!o) return '';
+    if (o.holat === 'paying') return '<div class="banner sariq"><span class="e">⏳</span><span>Uzaytirish to‘lovingiz tekshirilmoqda — tasdiqlanishi bilan yangi darslar shu yerda chiqadi.</span></div>';
+    const tugash = h.obuna && h.obuna.tugash ? vaqtYoz(h.obuna.tugash).kun.toLowerCase() : null;
+    return `<div class="b-kart" id="uzaytirishKart">
+      <h3>🔁 Obunani uzaytirish</h3>
+      <p class="b-izoh">${tugash ? `Obunangiz <b>${tugash}</b> tugaydi.` : 'Obunangiz tugadi.'} Darslar to‘xtab qolmasligi uchun keyingi oyni hozir to‘lang — kunlaringiz va ustozingiz o‘zgarmaydi.</p>
+      <div id="taklifQism">${taklifQism(h, 'Ustozingiz').replace('USTOZINGIZ TAKLIFI', 'KEYINGI OY').replace('⏱ Soatlar sizga band', '⏱ Kunlaringiz sizga band')}</div>
+    </div>`;
   }
   function taklifUlash(h){
     kartaNusxa();
