@@ -368,6 +368,20 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
 .banner.sariq{background:var(--sun-soft);color:#6b4e00}
 .banner.qizil{background:#fde8e6;color:#9a3b33}
 .banner .e{font-size:20px;line-height:1.2}
+/* Kurslarim (ustozsiz obuna / bonus) */
+.kurs-q{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.kurs-q:first-of-type{border-top:0}
+.kurs-q .kr{width:56px;height:56px;border-radius:14px;background:var(--teal-soft);flex:none;display:grid;place-items:center;font-size:24px;overflow:hidden}
+.kurs-q .kr img{width:100%;height:100%;object-fit:cover}
+.kurs-q .ki{flex:1;min-width:0}
+.kurs-q .ki b{display:block;font-size:15.5px}
+.kurs-q .ki small{color:var(--mut);font-size:13px;font-weight:600}
+.kurs-q.qulf .kr{filter:grayscale(1);opacity:.6}
+.kurs-q .kl{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.kurs-q .kl button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:6px 10px;font:700 13px 'Manrope',sans-serif;color:var(--ink);cursor:pointer;max-width:100%;overflow-wrap:anywhere;text-align:left}
+.kurs-q .kursOch{display:inline-block;margin-top:8px;font-weight:800;font-size:14px;color:var(--teal);text-decoration:none}
+.sinov-taklif{background:var(--navy);color:#fff}
+.sinov-taklif p{color:#c9d4e3;margin:0 0 14px}
 .karta-quti{background:var(--navy);color:#fff;border-radius:18px;padding:16px;margin:12px 0}
 .karta-quti small{display:block;color:#9fb0c8;font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
 .karta-quti .kq-raqam{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
@@ -1227,6 +1241,18 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     clearInterval(sanoqT);
     kamStop();
     const el = $('#bosqich');
+    // Kurslari bor (ustozsiz obuna yoki obunasi tugagan) o'quvchiga landing o'rniga "Kurslarim"
+    if (h && h.bosqich === 'yangi' && h.kurslar) {
+      document.body.classList.add('bosqichda'); el.hidden = false;
+      const k = h.kurslar;
+      el.innerHTML = bosh(h.ism, 'Kurslarim', k.holat === 'faol' ? 'Kurslaringiz ochiq 📚' : 'Obunangiz tugagan',
+        k.holat === 'faol' ? (k.tugash ? `Obuna ${vaqtYoz(k.tugash).kun.toLowerCase()} gacha` : '') : 'Kurslar endi ustoz bilan 1-1 darslarga sovg‘a sifatida ochiladi.') + `
+      <div class="b-ichi">${k.holat === 'faol' ? kurslarKart(k) + sinovTaklif(false) : sinovTaklif(true) + kurslarKart(k)}${bahosizKart(h)}</div>`;
+      kurslarUlash();
+      if (h.bahosiz) bahoUlash(h.bahosiz.bookingId);
+      pk();
+      return;
+    }
     if (!h || h.bosqich === 'yangi') { el.hidden = true; document.body.classList.remove('bosqichda'); pk(); return; }
     document.body.classList.add('bosqichda'); el.hidden = false;
     const v = h.startsAt ? vaqtYoz(h.startsAt) : null;
@@ -1353,7 +1379,34 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       document.querySelectorAll('[data-koch]').forEach((b) => { b.onclick = () => kochOch(b.dataset.koch); });
       document.querySelectorAll('[data-daftar]').forEach((b) => { b.onclick = () => daftarOch(b.dataset.daftar); });
     }
+    const ichi = h.kurslar && el.querySelector('.b-ichi');
+    if (ichi) {
+      // Sinov darsi yo'lidagi (yoki ustoz bilan o'qiyotgan) o'quvchiga kurslar pastda
+      ichi.insertAdjacentHTML('beforeend', kurslarKart(h.kurslar));
+      kurslarUlash();
+    }
     pk();
+  }
+  // ---- Kurslarim: biriktirilgan kurslar (ochiq — havola va login/parol, qulf — 1-1 taklifi) ----
+  function kurslarKart(k){
+    const sarlavha = k.holat === 'bonus' ? '🎁 Bonus kurslar' : k.holat === 'faol' ? '📚 Kurslarim' : '🔒 Kurslarim';
+    const izoh = k.holat === 'bonus' ? '<p style="margin:0 0 6px;color:var(--mut);font-size:14px">Ustoz bilan darslaringizga qo‘shimcha — o‘zingiz mustaqil takrorlang.</p>'
+      : k.holat === 'tugagan' ? '<p style="margin:0 0 6px;color:var(--mut);font-size:14px">Obuna tugagani uchun kurslar yopilgan. Ustoz bilan 1-1 darslarni boshlasangiz, ular yana ochiladi.</p>' : '';
+    return `<div class="b-kart"><h3>${sarlavha}</h3>${izoh}${k.items.map((c) => {
+      const rasm = c.rasm ? `<img src="${esc(rasmUrl(c.rasm))}" alt="" onerror="this.remove()">` : '📘';
+      if (!c.ochiq) return `<div class="kurs-q qulf"><div class="kr">${rasm}</div><div class="ki"><b>${esc(c.nom)}</b><small>🔒 Yopiq</small></div></div>`;
+      const kirish = c.login || c.parol ? `<div class="kl">${c.login ? `<button type="button" data-nusxa="${esc(c.login)}" title="Nusxa olish">👤 ${esc(c.login)}</button>` : ''}${c.parol ? `<button type="button" data-nusxa="${esc(c.parol)}" title="Nusxa olish">🔑 ${esc(c.parol)}</button>` : ''}</div>` : '';
+      return `<div class="kurs-q"><div class="kr">${rasm}</div><div class="ki"><b>${esc(c.nom)}</b>${c.tavsif ? `<small>${esc(c.tavsif).slice(0, 140)}</small>` : ''}${kirish}<a class="kursOch" href="${esc(c.url)}" target="_blank" rel="noopener">Kursni ochish →</a></div></div>`;
+    }).join('')}</div>`;
+  }
+  function sinovTaklif(asosiy){
+    return asosiy
+      ? `<div class="b-kart sinov-taklif"><h3>🎓 Ustoz bilan bepul sinov darsi</h3><p>Shaxsiy ustoz bilan 1-1 darslar — gapirishni tezroq o‘rganasiz, kurslar esa sovg‘a sifatida yana ochiladi. Birinchi dars bepul.</p><button class="cta" type="button" data-sinov style="width:100%">Vaqt tanlash</button></div>`
+      : `<div class="b-kart markaz"><p style="margin:0 0 12px">Ustoz bilan gaplashib ko‘rmoqchimisiz? Birinchi 1-1 dars — <b>bepul</b>.</p><button class="cta" type="button" data-sinov style="width:100%">🎓 Bepul sinov darsiga yozilish</button></div>`;
+  }
+  function kurslarUlash(){
+    kartaNusxa();
+    document.querySelectorAll('[data-sinov]').forEach((b) => { b.onclick = vaqtOch; });
   }
   // ---- Darslarim: katakchalar, ko'chirish imkoniyatlari, qoidalar ----
   const HOLAT_YORLIQ = { otildi: '✓ O‘tildi', kelmadi: '✕ Kelmadingiz', otmadi: 'O‘tmadi', kechirildi: 'Kechirildi', hozir: '● Hozir', kutilmoqda: 'Kutilmoqda' };
@@ -1815,7 +1868,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         x.tolovRad || '', (x.darslar || []).map((d) => d.startsAt).join(','), x.obuna ? x.obuna.tugash : '',
         x.taklif ? `${x.taklif.id}:${x.taklif.holat}:${x.taklif.expiresAt || ''}` : '', x.bahosiz ? x.bahosiz.bookingId : '',
         x.jadval ? JSON.stringify([x.jadval.darslar.map((d) => [d.startsAt, d.holat, d.kochirsaBoladi, d.daftar ? 1 : 0]), x.jadval.ruxsat]) : '',
-        x.daftar ? JSON.stringify(x.daftar) : ''].join('|') : '';
+        x.daftar ? JSON.stringify(x.daftar) : '', x.kurslar ? JSON.stringify(x.kurslar) : ''].join('|') : '';
       if (kalitH(h) !== kalitH(holat)) chiz(h);
     } catch (e) { /* tarmoq xatosi — keyingi safar */ }
   }
