@@ -25,7 +25,8 @@ label{display:block;font-size:13px;font-weight:800;margin:14px 0 6px}
 .maydon:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.15)}
 .maydon span{padding:0 10px 0 14px;color:var(--mut);font-weight:800;font-size:17px}
 .maydon input{flex:1;border:0;outline:0;font:inherit;font-size:18px;font-weight:700;padding:14px 14px 14px 0;min-width:0;background:transparent;color:var(--navy)}
-.maydon.parol input{padding-left:14px;letter-spacing:3px}
+.maydon.parol input{padding-left:14px;letter-spacing:2px}
+.korsat{border:0;background:transparent;box-shadow:none;width:auto;margin:0;padding:0 14px;font-size:20px;cursor:pointer;color:var(--mut)}
 .xato{color:#be123c;font-size:14px;font-weight:700;min-height:20px;margin:12px 0 0}
 button{width:100%;border:0;border-radius:14px;padding:15px;font:inherit;font-size:16px;font-weight:800;cursor:pointer;margin-top:10px;
   background:linear-gradient(135deg,var(--teal),var(--teal-2));color:#fff;box-shadow:0 10px 24px rgba(13,148,136,.3)}
@@ -42,7 +43,7 @@ button:disabled{opacity:.7;cursor:default}
   <label for="tel">Telefon raqam</label>
   <div class="maydon"><span>+998</span><input id="tel" type="tel" inputmode="numeric" autocomplete="username" placeholder="90 123 45 67" maxlength="12" autofocus></div>
   <label for="parol">Parol</label>
-  <div class="maydon parol"><input id="parol" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••"></div>
+  <div class="maydon parol"><input id="parol" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••"><button type="button" class="korsat" id="korsat" aria-label="Parolni ko‘rsatish">👁</button></div>
   <div class="xato" id="xato" role="alert"></div>
   <button type="submit" id="yubor">Kirish</button>
   <div class="yordam">Login-parol yo‘qmi yoki unutdingizmi?<br>Telegramda <a href="https://t.me/MT_yordam_bot" target="_blank" rel="noopener">@MT_yordam_bot</a> ni oching — «Raqamni yuborish» yoki «🔑 Parolni tiklash»</div>
@@ -58,6 +59,13 @@ button:disabled{opacity:.7;cursor:default}
   $('#tel').addEventListener('input', function (e) {
     var r = e.target.value.replace(/\D/g, '').replace(/^998/, '').slice(0, 9);
     e.target.value = [r.slice(0, 2), r.slice(2, 5), r.slice(5, 7), r.slice(7, 9)].filter(Boolean).join(' ');
+  });
+  // Parol harf va raqamdan iborat bo'lishi mumkin — ko'rib tekshirish uchun
+  $('#korsat').addEventListener('click', function () {
+    var p = $('#parol'), ochiq = p.type === 'password';
+    p.type = ochiq ? 'text' : 'password';
+    this.setAttribute('aria-label', ochiq ? 'Parolni yashirish' : 'Parolni ko‘rsatish');
+    p.focus();
   });
   $('#forma').addEventListener('submit', function (e) {
     e.preventDefault();
