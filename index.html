@@ -323,6 +323,15 @@ body.bosqichda .hero,body.bosqichda main,body.bosqichda footer,body.bosqichda .p
 .radar i:nth-of-type(2){right:2px;top:10px;background:var(--sun);color:var(--navy);animation-delay:.6s}
 .radar i:nth-of-type(3){right:12px;bottom:6px;background:#3b82f6;animation-delay:1.2s}
 .markaz{text-align:center}
+/* Pastki yordamchi havolalar: oferta va shartnomani bekor qilish (ko'zga tashlanmaydi) */
+.past-havola{text-align:center;font-size:12px;color:var(--mut);margin:18px 0 4px;opacity:.75}
+.past-havola a,.past-havola button{all:unset;cursor:pointer;color:var(--mut);text-decoration:underline;text-underline-offset:2px}
+.bekor-jadval{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 12px;text-align:left}
+.bekor-jadval td{padding:6px 0;border-bottom:1px solid #eef2f7}
+.bekor-jadval td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.bekor-jadval tr.jami td{font-weight:800;border-bottom:none}
+.bekor-maydon{width:100%;box-sizing:border-box;border:1px solid #dbe3ee;border-radius:12px;padding:11px 12px;font:inherit;font-size:15px;margin:6px 0}
+.bekor-rozi{display:flex;gap:8px;align-items:flex-start;text-align:left;font-size:13px;color:var(--mut);margin:8px 0 12px}
 .markaz p{color:var(--mut);margin:8px 0 0;font-size:15px}
 .ustoz-k{display:flex;gap:14px;align-items:center}
 .ustoz-k .av{flex:none;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#3b82f6);color:#fff;display:grid;place-items:center;font-family:'Unbounded';font-size:24px;overflow:hidden;box-shadow:0 0 0 4px var(--teal-soft)}
@@ -717,6 +726,15 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
     <p class="xato" id="kochXato" role="alert"></p>
     <button class="cta" type="button" id="kochTasdiq" disabled style="width:100%">Yangi vaqtni tanlang</button>
     <button class="qongiroq" type="button" id="kochYop">Yopish</button>
+  </div>
+</div>
+<div class="oyna" id="bekorOyna" hidden>
+  <div class="ichi vaqt-ichi" role="dialog" aria-modal="true" aria-labelledby="bekorS">
+    <h3 id="bekorS">Shartnomani bekor qilish</h3>
+    <p class="vaqt-izoh" id="bekorIzoh"></p>
+    <div id="bekorTana"></div>
+    <p class="xato" id="bekorXato" role="alert"></p>
+    <button class="qongiroq" type="button" id="bekorYop">Yopish</button>
   </div>
 </div>
 <div class="oyna" id="daftarOyna" hidden>
@@ -1374,7 +1392,9 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
         <div class="b-kart markaz">
           <p style="margin:0">📞 Ustozingiz tez orada qo‘ng‘iroq qilib, dars jadvalini siz bilan kelishadi. Jadval shu yerda chiqadi.</p>
         </div>`}
+        <p class="past-havola"><a href="${OFERTA_URL}" target="_blank" rel="noopener">Ommaviy oferta</a> · <button type="button" id="bekorHavola">Shartnomani bekor qilish</button></p>
       </div>`;
+      const bh = $('#bekorHavola'); if (bh) bh.onclick = bekorOch;
       const kb = $('#kirishBtn'); if (kb) kb.onclick = kirish;
       if (h.taklif && h.taklif.holat === 'sent') taklifUlash(h);
       if (h.bahosiz) bahoUlash(h.bahosiz.bookingId);
@@ -1519,6 +1539,67 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
   const materialYop = () => { $('#matOyna').hidden = true; $('#matTana').innerHTML = ''; document.body.style.overflow = ''; };
   $('#matYop').onclick = materialYop;
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-mat]'); if (b) materialOch(b.dataset.mat, b.dataset.matNom); });
+  // ---- Shartnomani bekor qilish (oferta, "Ustoz bilan darslar paketini bekor qilish") ----
+  const OFERTA_URL = 'https://myteacher.uz/oferta/';
+  const som = (n) => `${Math.round(n || 0).toLocaleString('ru-RU')} so‘m`;
+  async function bekorOch(){
+    $('#bekorXato').textContent = ''; $('#bekorTana').innerHTML = '';
+    $('#bekorIzoh').textContent = 'Yuklanmoqda…';
+    $('#bekorOyna').hidden = false; pk();
+    try {
+      const r = await fetch(`${KAPI}/course-page/bekor?t=${encodeURIComponent(KALIT)}`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || 'Ma’lumot olinmadi');
+      if (d.sorov && d.sorov.holat === 'kutilmoqda') {
+        $('#bekorIzoh').textContent = 'So‘rovingiz ko‘rib chiqilmoqda 🙏 Administrator 10 ish kuni ichida siz bilan bog‘lanadi.';
+        return;
+      }
+      if (!d.hisob) {
+        $('#bekorIzoh').textContent = 'Faol darslar paketi topilmadi. Savol bo‘lsa, administratorga yozing — yordam beramiz.';
+        return;
+      }
+      const h = d.hisob;
+      $('#bekorIzoh').innerHTML = `Bekor qilsangiz, qolgan darslaringiz bekor bo‘ladi va pul <a href="${OFERTA_URL}" target="_blank" rel="noopener">ommaviy oferta</a>ga ko‘ra quyidagicha qaytariladi:`;
+      $('#bekorTana').innerHTML = `
+        <table class="bekor-jadval">
+          <tr><td>To‘langan</td><td>${som(h.tolangan)}</td></tr>
+          <tr><td>O‘tilgan darslar: ${h.otilgan} / ${h.darslar}</td><td>− ${som(h.otilganSumma)}</td></tr>
+          <tr><td>Soliq va xarajatlar (${h.ushlanmaFoiz}%)</td><td>− ${som(h.ushlanma)}</td></tr>
+          <tr class="jami"><td>Qaytariladi</td><td>${som(h.qaytariladi)}</td></tr>
+        </table>
+        <textarea class="bekor-maydon" id="bekorSabab" rows="2" maxlength="500" placeholder="Nega bekor qilmoqchisiz? (ixtiyoriy — xizmatimizni yaxshilashga yordam beradi)"></textarea>
+        <input class="bekor-maydon" id="bekorKarta" inputmode="numeric" maxlength="19" placeholder="Pul qaytariladigan karta: 8600 1234 5678 9012" />
+        <label class="bekor-rozi"><input type="checkbox" id="bekorRozi" /> <span>Ommaviy ofertaning shartnomani bekor qilish shartlari bilan tanishdim</span></label>
+        <button class="cta" type="button" id="bekorYubor" style="width:100%">So‘rov yuborish</button>`;
+      const k = $('#bekorKarta');
+      k.oninput = () => { k.value = k.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 '); };
+      $('#bekorYubor').onclick = bekorYubor;
+    } catch (e) {
+      $('#bekorIzoh').textContent = '';
+      $('#bekorXato').textContent = e.message || 'Xatolik, qayta urinib ko‘ring';
+    }
+  }
+  async function bekorYubor(){
+    const b = $('#bekorYubor'); $('#bekorXato').textContent = '';
+    b.disabled = true;
+    try {
+      const r = await fetch(`${KAPI}/course-page/bekor`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: KALIT, sabab: $('#bekorSabab').value, karta: $('#bekorKarta').value, rozi: $('#bekorRozi').checked }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(Array.isArray(d.message) ? d.message.join(', ') : (d.message || 'Yuborib bo‘lmadi'));
+      $('#bekorTana').innerHTML = '';
+      $('#bekorIzoh').textContent = d.message || 'So‘rovingiz qabul qilindi.';
+    } catch (e) {
+      $('#bekorXato').textContent = e.message || 'Xatolik, qayta urinib ko‘ring';
+      b.disabled = false;
+    }
+  }
+  const bekorYop = () => { $('#bekorOyna').hidden = true; pk(); };
+  $('#bekorYop').onclick = bekorYop;
+  $('#bekorOyna').addEventListener('click', (e) => { if (e.target.id === 'bekorOyna') bekorYop(); });
+
   async function daftarOch(id){
     $('#daftarXato').textContent = ''; $('#daftarTana').innerHTML = '';
     $('#daftarIzoh').textContent = 'Yuklanmoqda…';
