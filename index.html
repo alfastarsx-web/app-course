@@ -1563,10 +1563,11 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       $('#bekorTana').innerHTML = `
         <table class="bekor-jadval">
           <tr><td>To‘langan</td><td>${som(h.tolangan)}</td></tr>
-          <tr><td>O‘tilgan darslar: ${h.otilgan} / ${h.darslar}</td><td>− ${som(h.otilganSumma)}</td></tr>
-          <tr><td>Soliq va xarajatlar (${h.ushlanmaFoiz}%)</td><td>− ${som(h.ushlanma)}</td></tr>
+          <tr><td>O‘tilgan darslar: ${h.otilgan} × ${som(h.odatiyNarx ?? h.darsNarxi)} (chegirmasiz)</td><td>− ${som(h.otilganSumma)}</td></tr>
+          <tr><td>Xarajatlar: ustoz tanlash, sinov darsi, to‘lov komissiyasi</td><td>− ${som(h.ushlanma)}</td></tr>
           <tr class="jami"><td>Qaytariladi</td><td>${som(h.qaytariladi)}</td></tr>
         </table>
+        <p style="font-size:13px;color:#64748b;margin:0 0 12px;text-align:left">Paketda har bir dars chegirmali narxda 🎁 Chegirma paket oxirigacha o‘qilganda amal qiladi, shuning uchun muddatidan oldin bekor qilinsa, o‘tilgan darslar odatiy narxda hisoblanadi.</p>
         <textarea class="bekor-maydon" id="bekorSabab" rows="2" maxlength="500" placeholder="Nega bekor qilmoqchisiz? (ixtiyoriy — xizmatimizni yaxshilashga yordam beradi)"></textarea>
         <input class="bekor-maydon" id="bekorKarta" inputmode="numeric" maxlength="19" placeholder="Pul qaytariladigan karta: 8600 1234 5678 9012" />
         <label class="bekor-rozi"><input type="checkbox" id="bekorRozi" /> <span>Ommaviy ofertaning shartnomani bekor qilish shartlari bilan tanishdim</span></label>
