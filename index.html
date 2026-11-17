@@ -1551,7 +1551,7 @@ button.tarif[aria-pressed="true"]{border-color:var(--teal);background:var(--teal
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.message || 'Ma’lumot olinmadi');
       if (d.sorov && d.sorov.holat === 'kutilmoqda') {
-        $('#bekorIzoh').textContent = 'So‘rovingiz ko‘rib chiqilmoqda 🙏 Administrator 10 ish kuni ichida siz bilan bog‘lanadi.';
+        $('#bekorIzoh').textContent = 'So‘rovingiz ko‘rib chiqilmoqda 🙏 Administrator uni 10 ish kuni ichida ko‘rib chiqadi, pul esa shundan keyin 10 ish kuni ichida kartangizga qaytariladi.';
         return;
       }
       if (!d.hisob) {
